@@ -101,11 +101,13 @@ import java.util.Map;
 
 
 /**
- * Entry point for portlet sample-portlet. This class derives from {@link QBiCPortletUI}, which is found in the {@code portal-utils-lib} library.
+ * Entry point for portlet omero-client-portlet. This class derives from {@link QBiCPortletUI}, which is found in the {@code portal-utils-lib} library.
+ *
+ * @see <a href=https://github.com/qbicsoftware/portal-utils-lib>portal-utils-lib</a>
  */
 @Theme("mytheme")
 @SuppressWarnings("serial")
-@Widgetset("life.qbic.portlet.AppWidgetSet")
+@Widgetset("life.qbic.portal.portlet.AppWidgetSet")
 public class OMEROClientPortlet extends QBiCPortletUI {
 
     private static final Logger LOG = LogManager.getLogger(OMEROClientPortlet.class);
@@ -131,7 +133,7 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         String usr = "bio_user_1";
         String pwd = "bio_user_1";
 
-        LOG.info("Generating content for portlet sample-portlet");
+        LOG.info("Generating content ...");
 
         final VerticalLayout panelContent = new VerticalLayout();
         panelContent.setSpacing(true);
@@ -147,11 +149,16 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         panelContent.addComponent(welcomeLabel);
         insertHorizontalSeparator(panelContent);
 
+        LOG.info("Flag_0............................");
+
         ///////////////////////////////////////////////////////////////////
 
         BasicOMEROClient oc = new BasicOMEROClient(usr, pwd);
         oc.connect();
         HashMap<Long, String> projectMap = oc.loadProjects();
+
+        LOG.info("Flag_1............................");
+        LOG.info(projectMap.toString());
 
 //        Set set = projectMap.entrySet();
 //        Iterator iterator = set.iterator();
