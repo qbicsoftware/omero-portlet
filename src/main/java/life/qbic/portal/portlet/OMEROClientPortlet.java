@@ -223,8 +223,8 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         sampleGrid.setCaption("Samples");
         sampleGrid.setSelectionMode(SelectionMode.SINGLE);
 
-        sampleGrid.addColumn("ID", String.class);
-        sampleGrid.addColumn("Description", String.class);
+        sampleGrid.addColumn("Code", String.class);
+        sampleGrid.addColumn("Name", String.class);
 
         ///////////////////
 
@@ -319,7 +319,7 @@ public class OMEROClientPortlet extends QBiCPortletUI {
 
             if (selected != null){
 
-                String sampleName = (String)sampleGrid.getContainerDataSource().getItem(selected).getItemProperty("ID").getValue();
+                String sampleName = (String)sampleGrid.getContainerDataSource().getItem(selected).getItemProperty("Code").getValue();
 
                 oc.connect();
                 HashMap<Long, String> imageList = oc.getImages(revDsMap.get(sampleName));
