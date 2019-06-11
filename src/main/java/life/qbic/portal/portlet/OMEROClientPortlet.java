@@ -223,7 +223,8 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         sampleGrid.setCaption("Samples");
         sampleGrid.setSelectionMode(SelectionMode.SINGLE);
 
-        sampleGrid.addColumn("Name", String.class);
+        sampleGrid.addColumn("ID", String.class);
+        sampleGrid.addColumn("Description", String.class);
 
         ///////////////////
 
@@ -247,7 +248,7 @@ public class OMEROClientPortlet extends QBiCPortletUI {
                 projectLabel.setValue("<b>" + projName + "</b><br>" + projInfoMap.get("desc"));
 
 
-                HashMap<Long, String> datasetList = oc.getDatasets(revProjMap.get(projName));
+                HashMap<Long, HashMap<String, String>> datasetList = oc.getDatasets(revProjMap.get(projName));
                 oc.disconnect();
 
                 sampleGrid.getContainerDataSource().removeAllItems();
@@ -260,9 +261,12 @@ public class OMEROClientPortlet extends QBiCPortletUI {
                 while (dsIt.hasNext()) {
                     Map.Entry dsEntry = (Map.Entry) dsIt.next();
 
-                    sampleGrid.addRow(dsEntry.getValue());
+                    HashMap<String, String> datasetInfo = (HashMap<String, String>)dsEntry.getValue();
 
-                    revDsMap.put((String)dsEntry.getValue(), (Long)dsEntry.getKey());
+                    sampleGrid.addRow(datasetInfo.get("name"), datasetInfo.get("desc"));
+
+
+                    revDsMap.put(datasetInfo.get("name"), (Long)dsEntry.getKey());
                 }
         }});
 
@@ -315,7 +319,7 @@ public class OMEROClientPortlet extends QBiCPortletUI {
 
             if (selected != null){
 
-                String sampleName = (String)sampleGrid.getContainerDataSource().getItem(selected).getItemProperty("Name").getValue();
+                String sampleName = (String)sampleGrid.getContainerDataSource().getItem(selected).getItemProperty("ID").getValue();
 
                 oc.connect();
                 HashMap<Long, String> imageList = oc.getImages(revDsMap.get(sampleName));
@@ -375,13 +379,13 @@ public class OMEROClientPortlet extends QBiCPortletUI {
 
         });
 
-        sampleGrid.setWidth("200px");
+        sampleGrid.setWidth("400px");
         sampleGrid.setHeight("800px");
 
         hsplit.addComponent(sampleGrid);
 
         ///////////////////
-        imageGrid.setWidth("1200px");
+        imageGrid.setWidth("1000px");
         imageGrid.setHeight("800px");
 
         hsplit.addComponent(imageGrid);
