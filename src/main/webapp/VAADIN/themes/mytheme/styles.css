@@ -12990,3 +12990,7 @@ div.v-layout.v-horizontal.v-widget {
 	text-align: right;
 	padding-top: 50px;
 }
+
+.gridwithpics100px .v-grid-body .v-grid-cell {
+	height: 100px;
+}

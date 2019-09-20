@@ -9,3 +9,9 @@
   // Include mytheme theme styles in your theme
   @include mytheme;
 }
+
+// Set the row height to fit the pictures
+.gridwithpics100px .v-grid-body .v-grid-cell {
+    height: 100px;
+}
+

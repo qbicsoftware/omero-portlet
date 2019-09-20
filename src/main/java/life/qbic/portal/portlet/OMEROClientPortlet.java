@@ -1,8 +1,7 @@
 package life.qbic.portal.portlet;
 
 import java.awt.image.BufferedImage;
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
+import java.io.*;
 import java.sql.DriverManager;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
@@ -12,6 +11,10 @@ import javax.portlet.PortletContext;
 import javax.portlet.PortletSession;
 
 import com.vaadin.data.Property;
+import com.vaadin.data.util.IndexedContainer;
+import com.vaadin.data.util.filter.SimpleStringFilter;
+import com.vaadin.server.*;
+import com.vaadin.ui.*;
 import com.vaadin.ui.themes.ValoTheme;
 import life.qbic.portal.utils.ConfigurationManagerFactory;
 import omero.gateway.model.DatasetData;
@@ -22,29 +25,10 @@ import com.liferay.portal.kernel.exception.SystemException;
 import com.liferay.portal.service.UserLocalServiceUtil;
 import com.vaadin.annotations.Theme;
 import com.vaadin.annotations.Widgetset;
-import com.vaadin.server.VaadinRequest;
-import com.vaadin.server.WrappedPortletSession;
 import com.vaadin.shared.ui.label.ContentMode;
-import com.vaadin.ui.Button;
-import com.vaadin.ui.ComboBox;
-import com.vaadin.ui.Label;
-import com.vaadin.ui.PasswordField;
-import com.vaadin.ui.TextField;
-import com.vaadin.ui.Layout;
-import com.vaadin.ui.HorizontalLayout;
-import com.vaadin.ui.Panel;
-import com.vaadin.ui.VerticalLayout;
-import com.vaadin.ui.TabSheet;
-import com.vaadin.ui.Image;
-import com.vaadin.server.Resource;
-import com.vaadin.server.StreamResource;
-import com.vaadin.ui.Table;
-import com.vaadin.ui.Notification;
 import com.vaadin.ui.Button.ClickEvent;
 
 
-import com.vaadin.ui.HorizontalSplitPanel;
-import com.vaadin.ui.Grid;
 import com.vaadin.data.Property.ValueChangeEvent;
 import com.vaadin.data.Property.ValueChangeListener;
 import com.vaadin.ui.Grid.SelectionMode;
@@ -75,9 +59,6 @@ import omero.log.SimpleLogger;
 //////////////////////////////////////////
 //OMERO-JSON stuff
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -106,7 +87,10 @@ import org.apache.http.protocol.BasicHttpContext;
 
 ////////////////////////////////////
 
-import com.vaadin.ui.TreeTable;
+import org.apache.commons.codec.binary.Base64;
+
+//////////////////////////////////
+
 
 import life.qbic.omero.BasicOMEROClient;
 import java.util.HashMap;
@@ -153,39 +137,49 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         final VerticalLayout mainLayout = new VerticalLayout();
         mainLayout.setSpacing(true);
         mainLayout.setMargin(true);
+        mainLayout.setSizeFull();
 
         mainLayout.addComponent(this.getImgViewer());
 
         return mainLayout;
-
-
     }
 
     private Panel getImgViewer() {
 
-        Panel projCreatorPanel = new Panel("Image Viewer");
+        Panel imgViewerPanel = new Panel("Image Viewer");
+        imgViewerPanel.setWidth("100%");
+        imgViewerPanel.setHeight("100%");
 
         VerticalLayout panelContent = new VerticalLayout();
         panelContent.setSpacing(true);
         panelContent.setMargin(true);
+        panelContent.setWidth("100%");
+        panelContent.setHeight("100%");
 
         VerticalLayout projectLayout = new VerticalLayout();
         projectLayout.setSpacing(true);
         projectLayout.setMargin(false);
+        projectLayout.setWidth("100%");
+        projectLayout.setHeight("100%");
 
         HorizontalLayout topPanelLayout = new HorizontalLayout();
         topPanelLayout.setSpacing(true);
-        topPanelLayout.setMargin(true);
+        topPanelLayout.setMargin(false);
+        topPanelLayout.setWidth("50%");
+        topPanelLayout.setHeight("100%");
 
         ComboBox projectBox = new ComboBox("Select project:");
         projectBox.setInvalidAllowed(false);
         projectBox.setNullSelectionAllowed(false);
-        projectBox.setWidth("300px");
+        projectBox.setWidth("100%");
         projectBox.setImmediate(true);
 
 
         BasicOMEROClient oc = new BasicOMEROClient(cm.getOmeroUser(), cm.getOmeroPassword(), cm.getOmeroHostname(), Integer.parseInt(cm.getOmeroPort()));
         oc.connect();
+
+        //System.out.println("+++++++++++++++++++++session id: " + oc.getSessionId());
+
         HashMap<Long, String> projectMap = oc.loadProjects();
         oc.disconnect();
 
@@ -203,6 +197,7 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         Label projectLabel = new Label("<br>", ContentMode.HTML);
 
         Button refreshButton = new Button("Refresh");
+        refreshButton.setWidth("100%");
 
         projectLayout.addComponent(projectBox);
         projectLayout.addComponent(refreshButton);
@@ -213,22 +208,135 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         panelContent.addComponent(topPanelLayout);
 
         // Have a horizontal split panel as its root layout
-        HorizontalLayout hsplit = new HorizontalLayout();
+        GridLayout hsplit = new GridLayout(6, 2);
         hsplit.setSpacing(true);
-        hsplit.setMargin(true);
+        //hsplit.setMargin(true);
+        hsplit.setWidth("100%");
+        hsplit.setHeight("600px");
 
-        //left grid
 
-        Grid sampleGrid = new Grid();
+        ///////////////////////
+        // sample grid
+
+        IndexedContainer sampleGridContainer = new IndexedContainer();
+
+        sampleGridContainer.addContainerProperty("Code", String.class, "-null");
+        sampleGridContainer.addContainerProperty("Name", String.class, "-null");
+
+        Grid sampleGrid = new Grid(sampleGridContainer);
         sampleGrid.setCaption("Samples");
         sampleGrid.setSelectionMode(SelectionMode.SINGLE);
+        sampleGrid.setWidth("100%");
+        sampleGrid.setHeight("100%");
 
-        sampleGrid.addColumn("Code", String.class);
-        sampleGrid.addColumn("Name", String.class);
+
+        //sampleGrid.addColumn("Code", String.class);
+        //sampleGrid.addColumn("Name", String.class);
+
+        //sampleGrid.setFrozenColumnCount(1);
+
+        /////////////
+        //add filters
+
+        // Create a header row to hold column filters
+        Grid.HeaderRow filterRow = sampleGrid.appendHeaderRow();
+        // Set up a filter for all columns
+        for (Object pid: sampleGrid.getContainerDataSource().getContainerPropertyIds()) {
+
+            Grid.HeaderCell cell = filterRow.getCell(pid);
+
+            // Have an input field to use for filter
+            TextField filterField = new TextField();
+            filterField.setColumns(8);
+
+            // Update filter When the filter input is changed
+            filterField.addTextChangeListener(change -> {
+                // Can't modify filters so need to replace
+                sampleGridContainer.removeContainerFilters(pid);
+
+                // (Re)create the filter if necessary
+                if (! change.getText().isEmpty())
+                    sampleGridContainer.addContainerFilter(
+                            new SimpleStringFilter(pid,
+                                    change.getText(), true, false));
+            });
+            cell.setComponent(filterField);
+        }
 
         ///////////////////
+        //image grid
 
-        Table imageGrid = new Table("Images");
+        IndexedContainer imageGridContainer = new IndexedContainer();
+
+        imageGridContainer.addContainerProperty("Thumbnail", Resource.class, null);
+        imageGridContainer.addContainerProperty("Name", String.class, "");
+        imageGridContainer.addContainerProperty("Size (X x Y x Z)", String.class, "");
+        imageGridContainer.addContainerProperty("Time Points", String.class, "");
+        imageGridContainer.addContainerProperty("Channels", String.class, "");
+        imageGridContainer.addContainerProperty("Full Image", String.class, "");
+
+        Grid imageGrid = new Grid(imageGridContainer);
+        imageGrid.setCaption("Images");
+        imageGrid.setWidth("100%");
+        imageGrid.setHeight("100%");
+        imageGrid.setSelectionMode(SelectionMode.NONE);
+        imageGrid.setStyleName("gridwithpics100px");
+
+        // Define columns
+//        imageGrid.addColumn("Thumbnail", Resource.class);
+//        imageGrid.addColumn("Name", String.class);
+//        imageGrid.addColumn("Size (X x Y x Z)", String.class);
+//        imageGrid.addColumn("Time Points", String.class);
+//        imageGrid.addColumn("Channels", String.class);
+//        imageGrid.addColumn("Full Image", String.class);
+
+        // Set the renderers
+        imageGrid.getColumn("Thumbnail").setRenderer(new ImageRenderer());
+        imageGrid.getColumn("Full Image").setRenderer(new HtmlRenderer());
+
+        /////////////
+        //add filters
+
+        // Create a header row to hold column filters
+        filterRow = imageGrid.appendHeaderRow();
+        // Set up a filter for all columns
+        for (Object pid: imageGrid.getContainerDataSource().getContainerPropertyIds()) {
+
+            //System.out.println("//////////////////-----------------" + pid.toString());
+            if(pid.toString().equals("Thumbnail") || pid.toString().equals("Full Image")){
+                continue;
+            }
+
+            Grid.HeaderCell cell = filterRow.getCell(pid);
+
+            // Have an input field to use for filter
+            TextField filterField = new TextField();
+            filterField.setColumns(8);
+
+            // Update filter When the filter input is changed
+            filterField.addTextChangeListener(change -> {
+                // Can't modify filters so need to replace
+                imageGridContainer.removeContainerFilters(pid);
+
+                // (Re)create the filter if necessary
+                if (! change.getText().isEmpty())
+                    imageGridContainer.addContainerFilter(
+                            new SimpleStringFilter(pid,
+                                    change.getText(), true, false));
+            });
+            cell.setComponent(filterField);
+        }
+
+        /////////////////////////////////////
+
+        hsplit.addComponent(sampleGrid, 0, 0, 1, 1);
+        hsplit.addComponent(imageGrid, 2,0, 5,1);
+
+        panelContent.addComponent(hsplit);
+
+        imgViewerPanel.setContent(panelContent);
+
+        ////////////////////////////////////////////////////////////////////////
 
         projectBox.addValueChangeListener(new ValueChangeListener() {
             public void valueChange(ValueChangeEvent event) {
@@ -300,21 +408,8 @@ public class OMEROClientPortlet extends QBiCPortletUI {
             }
         });
 
+        sampleGrid.addSelectionListener(selectionEvent -> {
 
-
-        // Define some columns
-        imageGrid.addContainerProperty("Thumbnail", Image.class, null);
-        imageGrid.addContainerProperty("Name", String.class, null);
-        imageGrid.addContainerProperty("Size (X x Y x Z)", String.class, null);
-        imageGrid.addContainerProperty("Time Points", String.class, null);
-        imageGrid.addContainerProperty("Channels", String.class, null);
-        imageGrid.addContainerProperty("Link", Label.class, null);
-
-
-
-
-        sampleGrid.addSelectionListener(selectionEvent -> { // Java 8
-            // Get selection from the selection model
             Object selected = ((SingleSelectionModel)sampleGrid.getSelectionModel()).getSelectedRow();
 
             if (selected != null){
@@ -340,33 +435,25 @@ public class OMEROClientPortlet extends QBiCPortletUI {
                     String tps  = imageInfoMap.get("tps");
                     String chl  = imageInfoMap.get("channels");
 
-
-                    StreamResource.StreamSource sr = null;
-                    StreamResource res = null;
-
-
                     try{
 
                         ByteArrayInputStream imgThum = oc.getThumbnail(revDsMap.get(sampleName), (long)imgEntry.getKey());
 
-                        sr = new StreamResource.StreamSource() {
-                            public InputStream getStream()
-                            {
-                                return imgThum;
-                            }
-                        };
 
-                        res = new StreamResource(sr, "img_0");
+                        byte[] targetArray = new byte[imgThum.available()];
+                        imgThum.read(targetArray);
+
+
+                        String link = "<a href=\"http://134.2.183.129/omero/webclient/img_detail/" + String.valueOf(imgEntry.getKey()) + "/ \" target=\"_blank\" >open</a>";
+                        imageGrid.addRow(new ExternalResource("data:image/jpeg;base64,"+Base64.encodeBase64String(targetArray)), imgEntry.getValue(), size, tps, chl, link);
+
+
+
 
                     } catch (Exception e) {
                         System.out.println(e);
                     }
 
-                    Label link = new Label("<a href=\"http://134.2.183.129/omero/webclient/img_detail/" + String.valueOf(imgEntry.getKey()) + "/ \" target=\"_blank\" >OMERO link</a>", ContentMode.HTML);
-
-                    imageGrid.addItem(new Object[] {new Image("", res), imgEntry.getValue(),
-                                                    size, tps, chl, link},
-                                                    new Integer(i));
 
                     i++;
 
@@ -379,23 +466,9 @@ public class OMEROClientPortlet extends QBiCPortletUI {
 
         });
 
-        sampleGrid.setWidth("400px");
-        sampleGrid.setHeight("800px");
+        ////////////////////////////////////////////
 
-        hsplit.addComponent(sampleGrid);
+        return imgViewerPanel;
 
-        ///////////////////
-        imageGrid.setWidth("1000px");
-        imageGrid.setHeight("800px");
-
-        hsplit.addComponent(imageGrid);
-
-        panelContent.addComponent(hsplit);
-
-
-        projCreatorPanel.setContent(panelContent);
-
-
-        return projCreatorPanel;
     }
 }
