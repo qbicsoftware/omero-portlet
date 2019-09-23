@@ -90,6 +90,18 @@ import org.apache.http.protocol.BasicHttpContext;
 import org.apache.commons.codec.binary.Base64;
 
 //////////////////////////////////
+//omero json client
+
+import javax.json.Json;
+import javax.json.JsonArray;
+import javax.json.JsonObject;
+import javax.json.JsonObjectBuilder;
+import javax.json.JsonReader;
+import javax.json.JsonString;
+import javax.json.JsonStructure;
+import javax.json.JsonValue;
+
+//////////////////////
 
 
 import life.qbic.omero.BasicOMEROClient;
@@ -122,13 +134,50 @@ public class OMEROClientPortlet extends QBiCPortletUI {
 
 
     //////////////////////////////
+    //omero json client
+
+    private String baseURL;
+    private HttpClient httpClient;
+    private BasicHttpContext httpContext;
+    private String requestURL;
+    private Map<String, String> serviceURLs;
+    private String token;
+    private JsonObject ctx;
+
+    private String omeroSessionKey;
+
+    /////////////////////////////
 
 
     @Override
     protected Layout getPortletContent(final VaadinRequest request) {
-        // TODO: remove this method and to your own thing, please
 
-        //return REMOVE_THIS_METHOD_AND_DO_YOUR_OWN_THING_COMMA_PLEASE(request);
+        //////////////////////////////
+        //omero json client
+
+        this.baseURL = "http://134.2.183.129/omero/api/v0/";
+        this.httpClient = HttpClients.createDefault();
+        this.httpContext = new BasicHttpContext();
+        BasicCookieStore cookieStore = new BasicCookieStore();
+        cookieStore.clear();
+        this.httpContext.setAttribute(HttpClientContext.COOKIE_STORE, cookieStore);
+
+        try{
+
+            ctx = omeroJsonLogin(cm.getOmeroUser(), cm.getOmeroPassword(), 1);
+            this.omeroSessionKey = ctx.getString("sessionUuid");
+
+            System.out.println(ctx.toString());
+
+        } catch (Exception e) {
+            System.out.println("-->json login fail:");
+            e.printStackTrace();
+
+        }
+
+        ///////////////////////
+
+
         return displayData(request);
     }
 
@@ -444,7 +493,8 @@ public class OMEROClientPortlet extends QBiCPortletUI {
                         imgThum.read(targetArray);
 
 
-                        String link = "<a href=\"http://134.2.183.129/omero/webclient/img_detail/" + String.valueOf(imgEntry.getKey()) + "/ \" target=\"_blank\" >open</a>";
+                        //String link = "<a href=\"http://134.2.183.129/omero/webclient/img_detail/" + String.valueOf(imgEntry.getKey()) + "/ \" target=\"_blank\" >open</a>";
+                        String link = "<a href=\"http://134.2.183.129/omero/webclient/img_detail/" + String.valueOf(imgEntry.getKey()) + "/?server=1&bsession=" + this.omeroSessionKey + " \" target=\"_blank\" >open</a>";
                         imageGrid.addRow(new ExternalResource("data:image/jpeg;base64,"+Base64.encodeBase64String(targetArray)), imgEntry.getValue(), size, tps, chl, link);
 
 
@@ -470,5 +520,98 @@ public class OMEROClientPortlet extends QBiCPortletUI {
 
         return imgViewerPanel;
 
+    }
+
+    //////////////////////////////////
+    //omero json client
+
+    private JsonStructure get(String urlString, Map<String, String> params)
+            throws Exception {
+        HttpGet httpGet = null;
+        if (params == null || params.isEmpty())
+            httpGet = new HttpGet(urlString);
+        else {
+            URIBuilder builder = new URIBuilder(urlString);
+            for (Entry<String, String> e : params.entrySet()) {
+                builder.addParameter(e.getKey(), e.getValue());
+            }
+            httpGet = new HttpGet(builder.build());
+        }
+
+        HttpResponse res = httpClient.execute(httpGet);
+        try (JsonReader reader = Json.createReader(new BufferedReader(
+                new InputStreamReader(res.getEntity().getContent())))) {
+            return reader.read();
+        }
+    }
+
+    private JsonStructure post(String url, Map<String, String> params)
+            throws HttpException, ClientProtocolException, IOException {
+
+        HttpPost httpPost = new HttpPost(url);
+        if (params != null && !params.isEmpty()) {
+            List<NameValuePair> nvps = new ArrayList<NameValuePair>();
+            for (Entry<String, String> entry : params.entrySet()) {
+                nvps.add(new BasicNameValuePair(entry.getKey(), entry
+                        .getValue()));
+            }
+            httpPost.setEntity(new UrlEncodedFormEntity(nvps));
+        }
+        httpPost.addHeader("X-CSRFToken", this.token);
+        HttpResponse res = httpClient.execute(httpPost);
+        if (res.getStatusLine().getStatusCode() != 200)
+            throw new HttpException("POST failed. URL: " + url + " Status:"
+                    + res.getStatusLine());
+
+        try (JsonReader reader = Json.createReader(new BufferedReader(
+                new InputStreamReader(res.getEntity().getContent())))) {
+            return reader.read();
+        }
+    }
+
+    public Map<String, String> omeroJsonGetURLs() throws Exception {
+        JsonObject json = (JsonObject) get(requestURL, null);
+
+        this.serviceURLs = new HashMap<String, String>();
+
+        for (Entry<String, JsonValue> entry : json.entrySet()) {
+            this.serviceURLs.put(entry.getKey(),
+                    ((JsonString) entry.getValue()).getString());
+        }
+
+        return this.serviceURLs;
+    }
+
+    private String getCSRFToken() throws Exception {
+        String url = serviceURLs.get("url:token");
+        JsonObject json = (JsonObject) get(url, null);
+        return json.getJsonString("data").getString();
+    }
+
+    public JsonObject omeroJsonLogin(String username, String password, int serverId)
+            throws Exception {
+        // make sure we have all the necessary URLs
+        //omeroJsonGetVersion();
+        this.requestURL = "http://134.2.183.129/omero/api/v0/";
+        omeroJsonGetURLs();
+
+        // make sure we have a CSRF token
+        if (this.token == null)
+            this.token = getCSRFToken();
+
+        String url = serviceURLs.get("url:login");
+        Map<String, String> params = new HashMap<String, String>();
+        params.put("server", "" + serverId);
+        params.put("username", username);
+        params.put("password", password);
+
+        try {
+            JsonObject response = (JsonObject) post(url, params);
+            JsonObject ctx = response.getJsonObject("eventContext");
+            return ctx;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 }

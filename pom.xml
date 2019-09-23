@@ -73,6 +73,16 @@
 		</dependency>
 
 
+
+
+		<!-- for the omero jason client methods -->
+		<dependency>
+			<groupId>org.glassfish</groupId>
+			<artifactId>javax.json</artifactId>
+			<version>1.0.4</version>
+		</dependency>
+
+
 	</dependencies>
 
 </project>
