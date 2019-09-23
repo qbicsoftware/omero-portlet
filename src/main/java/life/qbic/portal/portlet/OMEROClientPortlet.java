@@ -319,8 +319,8 @@ public class OMEROClientPortlet extends QBiCPortletUI {
 
         imageGridContainer.addContainerProperty("Thumbnail", Resource.class, null);
         imageGridContainer.addContainerProperty("Name", String.class, "");
-        imageGridContainer.addContainerProperty("Size (X x Y x Z)", String.class, "");
-        imageGridContainer.addContainerProperty("Time Points", String.class, "");
+        imageGridContainer.addContainerProperty("Size (X, Y, Z)", String.class, "");
+        imageGridContainer.addContainerProperty("Image Time Points", String.class, "");
         imageGridContainer.addContainerProperty("Channels", String.class, "");
         imageGridContainer.addContainerProperty("Full Image", String.class, "");
 
