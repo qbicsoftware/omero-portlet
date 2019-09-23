@@ -331,6 +331,8 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         imageGrid.setSelectionMode(SelectionMode.NONE);
         imageGrid.setStyleName("gridwithpics100px");
 
+
+
         // Define columns
 //        imageGrid.addColumn("Thumbnail", Resource.class);
 //        imageGrid.addColumn("Name", String.class);
@@ -494,7 +496,16 @@ public class OMEROClientPortlet extends QBiCPortletUI {
 
 
                         //String link = "<a href=\"http://134.2.183.129/omero/webclient/img_detail/" + String.valueOf(imgEntry.getKey()) + "/ \" target=\"_blank\" >open</a>";
-                        String link = "<a href=\"http://134.2.183.129/omero/webclient/img_detail/" + String.valueOf(imgEntry.getKey()) + "/?server=1&bsession=" + this.omeroSessionKey + " \" target=\"_blank\" >open</a>";
+                        //String link = "<a href=\"http://134.2.183.129/omero/webclient/img_detail/" + String.valueOf(imgEntry.getKey()) + "/?server=1&bsession=" + this.omeroSessionKey + " \" target=\"_blank\" >open</a>";
+
+                        /////////"http://134.2.183.129/omero/webclient/img_detail/" + String.valueOf(imgEntry.getKey()) + "/?server=1&bsession=" + this.omeroSessionKey +
+
+                        //String link = "<input type=\"button\" value=\"Open\" onclick=\"window.open('" + "http://134.2.183.129/omero/webclient/img_detail/" + String.valueOf(imgEntry.getKey()) + "/?server=1&bsession=" + this.omeroSessionKey + "', '_blank')\">";
+
+                        String link = "<div style=\"display:flex; height:100%; width:100%\"> <div style=\"margin: auto;\">" +
+                                "<input type=\"button\" value=\"Open\" onclick=\"window.open('" + "http://134.2.183.129/omero/webclient/img_detail/" + String.valueOf(imgEntry.getKey()) + "/?server=1&bsession=" + this.omeroSessionKey + "', '_blank')\">" +
+                                "</div></div>";
+
                         imageGrid.addRow(new ExternalResource("data:image/jpeg;base64,"+Base64.encodeBase64String(targetArray)), imgEntry.getValue(), size, tps, chl, link);
 
 
