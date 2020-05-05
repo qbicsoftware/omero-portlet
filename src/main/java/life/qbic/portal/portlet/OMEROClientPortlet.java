@@ -156,6 +156,9 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         //omero json client
 
         this.baseURL = "http://134.2.183.129/omero/api/v0/";
+
+        this.requestURL = this.baseURL;
+
         this.httpClient = HttpClients.createDefault();
         this.httpContext = new BasicHttpContext();
         BasicCookieStore cookieStore = new BasicCookieStore();
@@ -165,6 +168,8 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         try{
 
             ctx = omeroJsonLogin(cm.getOmeroUser(), cm.getOmeroPassword(), 1);
+
+
             this.omeroSessionKey = ctx.getString("sessionUuid");
 
             System.out.println(ctx.toString());
@@ -225,6 +230,8 @@ public class OMEROClientPortlet extends QBiCPortletUI {
 
 
         BasicOMEROClient oc = new BasicOMEROClient(cm.getOmeroUser(), cm.getOmeroPassword(), cm.getOmeroHostname(), Integer.parseInt(cm.getOmeroPort()));
+
+
         oc.connect();
 
         //System.out.println("+++++++++++++++++++++session id: " + oc.getSessionId());
@@ -506,6 +513,24 @@ public class OMEROClientPortlet extends QBiCPortletUI {
                                 "<input type=\"button\" value=\"Open\" onclick=\"window.open('" + "http://134.2.183.129/omero/webclient/img_detail/" + String.valueOf(imgEntry.getKey()) + "/?server=1&bsession=" + this.omeroSessionKey + "', '_blank')\">" +
                                 "</div></div>";
 
+                        //String link = "<div style=\"display:flex; height:100%; width:100%\"> <div style=\"margin: auto;\">" +
+                        //        "<input type=\"button\" value=\"Open\" onclick=\"window.open('" + "http://134.2.24.118/omero/webclient/img_detail/" + String.valueOf(imgEntry.getKey()) + "/', '_blank')\">" +
+                        //        "</div></div>";
+
+                        //String link = "<div style=\"display:flex; height:100%; width:100%\"> <div style=\"margin: auto;\">" +
+                        //        "<input type=\"button\" value=\"Open\" onclick=\"window.open('" + "http://134.2.24.118/omero/iviewer/?images=" + String.valueOf(imgEntry.getKey()) + "&bsession=" + this.omeroSessionKey + "', '_blank')\">" +
+                        //        "</div></div>";
+
+
+                        //System.out.println("++url: " + "http://134.2.24.118/omero/iviewer/?images=" + String.valueOf(imgEntry.getKey()) + "&bsession=" + this.omeroSessionKey);
+
+                        //System.out.println("++url: " + "http://134.2.24.118/omero/webgateway/img_detail/" + String.valueOf(imgEntry.getKey()) + "/?server=1&bsession=" + this.omeroSessionKey);
+                        //System.out.println("++url: " + "http://134.2.24.118/omero/webclient/img_detail/" + String.valueOf(imgEntry.getKey()) + "/?server=1&bsession=" + this.omeroSessionKey);
+
+                        //getUI().getPage().open("http://google.com", "_blank" );
+
+
+
                         imageGrid.addRow(new ExternalResource("data:image/jpeg;base64,"+Base64.encodeBase64String(targetArray)), imgEntry.getValue(), size, tps, chl, link);
 
 
@@ -603,7 +628,7 @@ public class OMEROClientPortlet extends QBiCPortletUI {
             throws Exception {
         // make sure we have all the necessary URLs
         //omeroJsonGetVersion();
-        this.requestURL = "http://134.2.183.129/omero/api/v0/";
+        //this.requestURL = "http://134.2.183.129/omero/api/v0/";
         omeroJsonGetURLs();
 
         // make sure we have a CSRF token
