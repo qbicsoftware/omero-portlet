@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>life.qbic</groupId>
 	<artifactId>omero-client-portlet</artifactId>
-	<version>1.0.0-SNAPSHOT</version>
+	<version>1.0.0</version>
 	<name>OMERO Client</name>
 	<url>http://github.com/qbicsoftware/omero-client-portlet</url>
 	<description>Java client for the OMERO server</description>
