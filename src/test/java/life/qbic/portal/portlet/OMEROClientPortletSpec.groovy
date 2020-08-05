@@ -9,4 +9,17 @@ package life.qbic.portal.portlet
  * @author: Tobias Koch
  */
 class OMEROClientPortletSpec extends spock.lang.Specification {
+
+
+    def "GetPortletContent"() {
+    }
+
+    def "OmeroJsonGetURLs parses urls from JSON"() {
+    }
+
+    def "OmeroJsonLogin returns null on success"() {
+    }
+
+    def "OmeroJsonLogin throws exception"() {
+    }
 }
