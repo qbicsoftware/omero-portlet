@@ -1,5 +1,7 @@
 package life.qbic.portal.portlet
 
+import spock.lang.Specification
+
 /**
  * <short description>
  *
@@ -8,7 +10,7 @@ package life.qbic.portal.portlet
  * @since: 1.0.0
  * @author: Tobias Koch
  */
-class OMEROClientPortletSpec extends spock.lang.Specification {
+class OMEROClientPortletSpec extends Specification {
 
 
     def "GetPortletContent"() {
