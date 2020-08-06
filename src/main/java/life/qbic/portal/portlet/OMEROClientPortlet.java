@@ -234,8 +234,6 @@ public class OMEROClientPortlet extends QBiCPortletUI {
 
         oc.connect();
 
-        //System.out.println("+++++++++++++++++++++session id: " + oc.getSessionId());
-
         HashMap<Long, String> projectMap = oc.loadProjects();
         oc.disconnect();
 
@@ -266,7 +264,6 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         // Have a horizontal split panel as its root layout
         GridLayout hsplit = new GridLayout(6, 2);
         hsplit.setSpacing(true);
-        //hsplit.setMargin(true);
         hsplit.setWidth("100%");
         hsplit.setHeight("600px");
 
@@ -284,12 +281,6 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         sampleGrid.setSelectionMode(SelectionMode.SINGLE);
         sampleGrid.setWidth("100%");
         sampleGrid.setHeight("100%");
-
-
-        //sampleGrid.addColumn("Code", String.class);
-        //sampleGrid.addColumn("Name", String.class);
-
-        //sampleGrid.setFrozenColumnCount(1);
 
         /////////////
         //add filters
@@ -338,16 +329,6 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         imageGrid.setSelectionMode(SelectionMode.NONE);
         imageGrid.setStyleName("gridwithpics100px");
 
-
-
-        // Define columns
-//        imageGrid.addColumn("Thumbnail", Resource.class);
-//        imageGrid.addColumn("Name", String.class);
-//        imageGrid.addColumn("Size (X x Y x Z)", String.class);
-//        imageGrid.addColumn("Time Points", String.class);
-//        imageGrid.addColumn("Channels", String.class);
-//        imageGrid.addColumn("Full Image", String.class);
-
         // Set the renderers
         imageGrid.getColumn("Thumbnail").setRenderer(new ImageRenderer());
         imageGrid.getColumn("Full Image").setRenderer(new HtmlRenderer());
@@ -360,7 +341,6 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         // Set up a filter for all columns
         for (Object pid: imageGrid.getContainerDataSource().getContainerPropertyIds()) {
 
-            //System.out.println("//////////////////-----------------" + pid.toString());
             if(pid.toString().equals("Thumbnail") || pid.toString().equals("Full Image")){
                 continue;
             }
@@ -488,7 +468,6 @@ public class OMEROClientPortlet extends QBiCPortletUI {
                     Map.Entry imgEntry = (Map.Entry) imgIt.next();
 
                     HashMap<String, String> imageInfoMap = oc.getImageInfo(revDsMap.get(sampleName), (long)imgEntry.getKey());
-                    //String imageInfoString = "desc: " + imageInfoMap.get("desc") + ", ";
                     String size = imageInfoMap.get("size");
                     String tps  = imageInfoMap.get("tps");
                     String chl  = imageInfoMap.get("channels");
@@ -501,35 +480,9 @@ public class OMEROClientPortlet extends QBiCPortletUI {
                         byte[] targetArray = new byte[imgThum.available()];
                         imgThum.read(targetArray);
 
-
-                        //String link = "<a href=\"http://134.2.183.129/omero/webclient/img_detail/" + String.valueOf(imgEntry.getKey()) + "/ \" target=\"_blank\" >open</a>";
-                        //String link = "<a href=\"http://134.2.183.129/omero/webclient/img_detail/" + String.valueOf(imgEntry.getKey()) + "/?server=1&bsession=" + this.omeroSessionKey + " \" target=\"_blank\" >open</a>";
-
-                        /////////"http://134.2.183.129/omero/webclient/img_detail/" + String.valueOf(imgEntry.getKey()) + "/?server=1&bsession=" + this.omeroSessionKey +
-
-                        //String link = "<input type=\"button\" value=\"Open\" onclick=\"window.open('" + "http://134.2.183.129/omero/webclient/img_detail/" + String.valueOf(imgEntry.getKey()) + "/?server=1&bsession=" + this.omeroSessionKey + "', '_blank')\">";
-
                         String link = "<div style=\"display:flex; height:100%; width:100%\"> <div style=\"margin: auto;\">" +
                                 "<input type=\"button\" value=\"Open\" onclick=\"window.open('" + "http://134.2.183.129/omero/webclient/img_detail/" + String.valueOf(imgEntry.getKey()) + "/?server=1&bsession=" + this.omeroSessionKey + "', '_blank')\">" +
                                 "</div></div>";
-
-                        //String link = "<div style=\"display:flex; height:100%; width:100%\"> <div style=\"margin: auto;\">" +
-                        //        "<input type=\"button\" value=\"Open\" onclick=\"window.open('" + "http://134.2.24.118/omero/webclient/img_detail/" + String.valueOf(imgEntry.getKey()) + "/', '_blank')\">" +
-                        //        "</div></div>";
-
-                        //String link = "<div style=\"display:flex; height:100%; width:100%\"> <div style=\"margin: auto;\">" +
-                        //        "<input type=\"button\" value=\"Open\" onclick=\"window.open('" + "http://134.2.24.118/omero/iviewer/?images=" + String.valueOf(imgEntry.getKey()) + "&bsession=" + this.omeroSessionKey + "', '_blank')\">" +
-                        //        "</div></div>";
-
-
-                        //System.out.println("++url: " + "http://134.2.24.118/omero/iviewer/?images=" + String.valueOf(imgEntry.getKey()) + "&bsession=" + this.omeroSessionKey);
-
-                        //System.out.println("++url: " + "http://134.2.24.118/omero/webgateway/img_detail/" + String.valueOf(imgEntry.getKey()) + "/?server=1&bsession=" + this.omeroSessionKey);
-                        //System.out.println("++url: " + "http://134.2.24.118/omero/webclient/img_detail/" + String.valueOf(imgEntry.getKey()) + "/?server=1&bsession=" + this.omeroSessionKey);
-
-                        //getUI().getPage().open("http://google.com", "_blank" );
-
-
 
                         imageGrid.addRow(new ExternalResource("data:image/jpeg;base64,"+Base64.encodeBase64String(targetArray)), imgEntry.getValue(), size, tps, chl, link);
 
