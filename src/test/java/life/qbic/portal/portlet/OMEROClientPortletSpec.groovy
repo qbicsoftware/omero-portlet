@@ -7,7 +7,7 @@ import spock.lang.Specification
  *
  * <detailed description>
  *
- * @since: 1.0.0
+ * @since: 1.1.0
  * @author: Tobias Koch
  */
 class OMEROClientPortletSpec extends Specification {
