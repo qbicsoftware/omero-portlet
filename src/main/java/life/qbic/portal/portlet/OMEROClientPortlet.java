@@ -1,71 +1,52 @@
 package life.qbic.portal.portlet;
 
-import java.awt.image.BufferedImage;
-import java.io.*;
-import java.sql.DriverManager;
-import java.sql.Connection;
-import java.sql.DatabaseMetaData;
-import java.sql.ResultSet;
-
-import javax.portlet.PortletContext;
-import javax.portlet.PortletSession;
-
-import com.vaadin.data.Property;
-import com.vaadin.data.util.IndexedContainer;
-import com.vaadin.data.util.filter.SimpleStringFilter;
-import com.vaadin.server.*;
-import com.vaadin.ui.*;
-import com.vaadin.ui.themes.ValoTheme;
-import life.qbic.portal.utils.ConfigurationManagerFactory;
-import omero.gateway.model.DatasetData;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
-import com.liferay.portal.kernel.exception.SystemException;
-import com.liferay.portal.service.UserLocalServiceUtil;
 import com.vaadin.annotations.Theme;
 import com.vaadin.annotations.Widgetset;
-import com.vaadin.shared.ui.label.ContentMode;
-import com.vaadin.ui.Button.ClickEvent;
-
-
 import com.vaadin.data.Property.ValueChangeEvent;
 import com.vaadin.data.Property.ValueChangeListener;
+import com.vaadin.data.util.IndexedContainer;
+import com.vaadin.data.util.filter.SimpleStringFilter;
+import com.vaadin.server.ExternalResource;
+import com.vaadin.server.Resource;
+import com.vaadin.server.VaadinRequest;
+import com.vaadin.shared.ui.label.ContentMode;
+import com.vaadin.ui.Button;
+import com.vaadin.ui.Button.ClickEvent;
+import com.vaadin.ui.ComboBox;
+import com.vaadin.ui.Grid;
 import com.vaadin.ui.Grid.SelectionMode;
 import com.vaadin.ui.Grid.SingleSelectionModel;
+import com.vaadin.ui.GridLayout;
+import com.vaadin.ui.HorizontalLayout;
+import com.vaadin.ui.Label;
+import com.vaadin.ui.Layout;
+import com.vaadin.ui.Notification;
+import com.vaadin.ui.Panel;
+import com.vaadin.ui.TextField;
+import com.vaadin.ui.VerticalLayout;
 import com.vaadin.ui.renderers.HtmlRenderer;
 import com.vaadin.ui.renderers.ImageRenderer;
-import com.vaadin.data.util.converter.Converter;
-import com.vaadin.ui.Image;
-
-import life.qbic.portal.utils.PortalUtils;
-import life.qbic.portal.Styles;
-import life.qbic.portal.Styles.NotificationType;
-
-
-///////////////////////////////////////
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.Locale;
-
-import omero.gateway.Gateway;
-import omero.gateway.LoginCredentials;
-import omero.gateway.SecurityContext;
-import omero.gateway.facility.BrowseFacility;
-import omero.gateway.model.ExperimenterData;
-import omero.gateway.model.ProjectData;
-import omero.log.SimpleLogger;
-
-//////////////////////////////////////////
-//OMERO-JSON stuff
-
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-
+import java.util.Set;
+import javax.json.Json;
+import javax.json.JsonObject;
+import javax.json.JsonReader;
+import javax.json.JsonString;
+import javax.json.JsonStructure;
+import javax.json.JsonValue;
+import life.qbic.omero.BasicOMEROClient;
+import life.qbic.portal.utils.ConfigurationManager;
+import life.qbic.portal.utils.ConfigurationManagerFactory;
+import org.apache.commons.codec.binary.Base64;
 import org.apache.http.HttpException;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
@@ -74,44 +55,14 @@ import org.apache.http.client.HttpClient;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.client.utils.URIBuilder;
-import org.apache.http.entity.ContentType;
-import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.BasicCookieStore;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.protocol.BasicHttpContext;
-
-
-////////////////////////////////////
-
-import org.apache.commons.codec.binary.Base64;
-
-//////////////////////////////////
-//omero json client
-
-import javax.json.Json;
-import javax.json.JsonArray;
-import javax.json.JsonObject;
-import javax.json.JsonObjectBuilder;
-import javax.json.JsonReader;
-import javax.json.JsonString;
-import javax.json.JsonStructure;
-import javax.json.JsonValue;
-
-//////////////////////
-
-
-import life.qbic.omero.BasicOMEROClient;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Set;
-import java.util.Map;
-
-import life.qbic.portal.utils.ConfigurationManager;
-
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * Entry point for portlet omero-client-portlet. This class derives from {@link QBiCPortletUI}, which is found in the {@code portal-utils-lib} library.
