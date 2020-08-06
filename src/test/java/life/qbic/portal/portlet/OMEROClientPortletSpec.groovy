@@ -13,9 +13,6 @@ import spock.lang.Specification
 class OMEROClientPortletSpec extends Specification {
 
 
-    def "GetPortletContent"() {
-    }
-
     def "OmeroJsonGetURLs parses urls from JSON"() {
     }
 
