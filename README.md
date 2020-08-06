@@ -10,3 +10,8 @@ Created by Luis Kuhn Cuellar (luis.kuhn@qbic.uni-tuebingen.de).
 ## Description
 
 ## How to Install
+
+## How to Run
+```bash
+mvn jetty:run -Djava.security.properties="allow_tls.properties"
+```
