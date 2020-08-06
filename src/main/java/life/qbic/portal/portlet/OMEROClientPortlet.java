@@ -13,6 +13,7 @@ import com.vaadin.shared.ui.label.ContentMode;
 import com.vaadin.ui.Button;
 import com.vaadin.ui.Button.ClickEvent;
 import com.vaadin.ui.ComboBox;
+import com.vaadin.ui.Component;
 import com.vaadin.ui.Grid;
 import com.vaadin.ui.Grid.SelectionMode;
 import com.vaadin.ui.Grid.SingleSelectionModel;
@@ -272,6 +273,7 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         imageGridContainer.addContainerProperty("Image Time Points", String.class, "");
         imageGridContainer.addContainerProperty("Channels", String.class, "");
         imageGridContainer.addContainerProperty("Full Image", String.class, "");
+        imageGridContainer.addContainerProperty("Image Download", Component.class, null);
 
         Grid imageGrid = new Grid(imageGridContainer);
         imageGrid.setCaption("Images");
@@ -415,17 +417,19 @@ public class OMEROClientPortlet extends QBiCPortletUI {
                 imageGrid.getContainerDataSource().removeAllItems();
 
                 int i = 0;
+                long imageId;
                 while (imgIt.hasNext()) {
                     Map.Entry imgEntry = (Map.Entry) imgIt.next();
+                    imageId = (long)imgEntry.getKey();
 
-                    HashMap<String, String> imageInfoMap = oc.getImageInfo(revDsMap.get(sampleName), (long)imgEntry.getKey());
+                    HashMap<String, String> imageInfoMap = oc.getImageInfo(revDsMap.get(sampleName), imageId);
                     String size = imageInfoMap.get("size");
                     String tps  = imageInfoMap.get("tps");
                     String chl  = imageInfoMap.get("channels");
 
                     try{
 
-                        ByteArrayInputStream imgThum = oc.getThumbnail(revDsMap.get(sampleName), (long)imgEntry.getKey());
+                        ByteArrayInputStream imgThum = oc.getThumbnail(revDsMap.get(sampleName), imageId);
 
 
                         byte[] targetArray = new byte[imgThum.available()];
@@ -435,7 +439,8 @@ public class OMEROClientPortlet extends QBiCPortletUI {
                                 "<input type=\"button\" value=\"Open\" onclick=\"window.open('" + "http://134.2.183.129/omero/webclient/img_detail/" + String.valueOf(imgEntry.getKey()) + "/?server=1&bsession=" + this.omeroSessionKey + "', '_blank')\">" +
                                 "</div></div>";
 
-                        imageGrid.addRow(new ExternalResource("data:image/jpeg;base64,"+Base64.encodeBase64String(targetArray)), imgEntry.getValue(), size, tps, chl, link);
+                        ImageDownloader imageDownloader = new ImageDownloader(imageId);
+                        imageGrid.addRow(new ExternalResource("data:image/jpeg;base64,"+Base64.encodeBase64String(targetArray)), imgEntry.getValue(), size, tps, chl, link, imageDownloader);
 
 
 
