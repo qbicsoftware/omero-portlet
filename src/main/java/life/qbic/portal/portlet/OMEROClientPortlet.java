@@ -172,11 +172,11 @@ public class OMEROClientPortlet extends QBiCPortletUI {
 
             this.omeroSessionKey = ctx.getString("sessionUuid");
 
-            System.out.println(ctx.toString());
+            LOG.info(ctx.toString());
 
         } catch (Exception e) {
-            System.out.println("-->json login fail:");
-            e.printStackTrace();
+            LOG.error("-->json login fail:");
+            LOG.debug(e);
 
         }
 
@@ -233,8 +233,6 @@ public class OMEROClientPortlet extends QBiCPortletUI {
 
 
         oc.connect();
-
-        //System.out.println("+++++++++++++++++++++session id: " + oc.getSessionId());
 
         HashMap<Long, String> projectMap = oc.loadProjects();
         oc.disconnect();
@@ -537,7 +535,7 @@ public class OMEROClientPortlet extends QBiCPortletUI {
 
 
                     } catch (Exception e) {
-                        System.out.println(e);
+                        LOG.error(e);
                     }
 
 
