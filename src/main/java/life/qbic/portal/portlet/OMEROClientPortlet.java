@@ -24,6 +24,10 @@ import com.vaadin.ui.Notification;
 import com.vaadin.ui.Panel;
 import com.vaadin.ui.TextField;
 import com.vaadin.ui.VerticalLayout;
+import com.vaadin.ui.Window;
+import com.vaadin.ui.renderers.ButtonRenderer;
+import com.vaadin.ui.renderers.ClickableRenderer.RendererClickEvent;
+import com.vaadin.ui.renderers.ClickableRenderer.RendererClickListener;
 import com.vaadin.ui.renderers.HtmlRenderer;
 import com.vaadin.ui.renderers.ImageRenderer;
 import java.io.BufferedReader;
@@ -63,6 +67,7 @@ import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.protocol.BasicHttpContext;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
 
 /**
  * Entry point for portlet omero-client-portlet. This class derives from {@link QBiCPortletUI}, which is found in the {@code portal-utils-lib} library.
@@ -136,6 +141,7 @@ public class OMEROClientPortlet extends QBiCPortletUI {
 
         return displayData(request);
     }
+
 
     private Layout displayData(final VaadinRequest request) {
 
@@ -272,6 +278,7 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         imageGridContainer.addContainerProperty("Image Time Points", String.class, "");
         imageGridContainer.addContainerProperty("Channels", String.class, "");
         imageGridContainer.addContainerProperty("Full Image", String.class, "");
+        imageGridContainer.addContainerProperty("Metadata", String.class, "");
 
         Grid imageGrid = new Grid(imageGridContainer);
         imageGrid.setCaption("Images");
@@ -292,7 +299,7 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         // Set up a filter for all columns
         for (Object pid: imageGrid.getContainerDataSource().getContainerPropertyIds()) {
 
-            if(pid.toString().equals("Thumbnail") || pid.toString().equals("Full Image")){
+            if(pid.toString().equals("Thumbnail") || pid.toString().equals("Full Image") || pid.toString().equals("Metadata")){
                 continue;
             }
 
@@ -423,19 +430,65 @@ public class OMEROClientPortlet extends QBiCPortletUI {
                     String tps  = imageInfoMap.get("tps");
                     String chl  = imageInfoMap.get("channels");
 
-                    try{
+                    //Add MetadataButton to Vaadin Grid and only pass the Button Label to make it runnable in Vaadin 7 Grid
+
+                    ButtonRenderer metadataButton = new ButtonRenderer();
+                    imageGrid.getColumn("Metadata").setRenderer(metadataButton);
+
+                    /* Add ClickListener to MetadataButton for opening SubWindow displaying Metadata as necessary
+                     */
+                    metadataButton.addClickListener(new RendererClickListener() {
+                        @Override
+                        public void click(RendererClickEvent rendererClickEvent) {
+
+                            // Define new Window to display metadata
+                            Window metaDataSubWindow = new Window("Metadata Subwindow");
+                            VerticalLayout subContent = new VerticalLayout();
+                            subContent.setMargin(true);
+                            metaDataSubWindow.setContent(subContent);
+                            //Initialize Grid Column Properties
+                            IndexedContainer imageGridContainer = new IndexedContainer();
+
+                            imageGridContainer.addContainerProperty("MetadataField1", String.class, "");
+                            imageGridContainer.addContainerProperty("MetadataField2", String.class, "");
+                            imageGridContainer.addContainerProperty("MetadataField3", String.class, "");
+
+                            // Add Properties to Grid
+                            Grid metadataGrid = new Grid(imageGridContainer);
+
+                            // Define Grid Name, SelectionMode and Style
+                            metadataGrid.setCaption("Metadata");
+                            metadataGrid.setSelectionMode(SelectionMode.NONE);
+                            metadataGrid.setStyleName("gridwithpics100px");
+
+                            // Add Grid to Window
+                            subContent.addComponent(metadataGrid);
+
+                            //ToDo Get Metadata from Omero Server and Add Metadata to Grid
+
+                            // Center it in the browser window
+                            metaDataSubWindow.center();
+
+                            // Open it in the UI
+                            addWindow(metaDataSubWindow);
+
+                        }
+                    });
+
+                try{
 
                         ByteArrayInputStream imgThum = oc.getThumbnail(revDsMap.get(sampleName), (long)imgEntry.getKey());
 
 
                         byte[] targetArray = new byte[imgThum.available()];
                         imgThum.read(targetArray);
-
+                        String metadataButtonLabel = "open";
                         String link = "<div style=\"display:flex; height:100%; width:100%\"> <div style=\"margin: auto;\">" +
                                 "<input type=\"button\" value=\"Open\" onclick=\"window.open('" + "http://134.2.183.129/omero/webclient/img_detail/" + String.valueOf(imgEntry.getKey()) + "/?server=1&bsession=" + this.omeroSessionKey + "', '_blank')\">" +
                                 "</div></div>";
 
-                        imageGrid.addRow(new ExternalResource("data:image/jpeg;base64,"+Base64.encodeBase64String(targetArray)), imgEntry.getValue(), size, tps, chl, link);
+                        imageGrid.addRow(new ExternalResource("data:image/jpeg;base64,"+Base64.encodeBase64String(targetArray)), imgEntry.getValue(), size, tps, chl, link, metadataButtonLabel);
+
 
 
 
