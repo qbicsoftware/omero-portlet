@@ -2,30 +2,31 @@ package life.qbic.portal.portlet;
 
 import com.vaadin.annotations.Theme;
 import com.vaadin.annotations.Widgetset;
-import com.vaadin.data.Property.ValueChangeEvent;
-import com.vaadin.data.Property.ValueChangeListener;
-import com.vaadin.data.util.IndexedContainer;
-import com.vaadin.data.util.filter.SimpleStringFilter;
+import com.vaadin.data.provider.ListDataProvider;
 import com.vaadin.server.ExternalResource;
 import com.vaadin.server.Resource;
+import com.vaadin.server.ThemeResource;
 import com.vaadin.server.VaadinRequest;
-import com.vaadin.shared.ui.label.ContentMode;
+import com.vaadin.shared.ui.ContentMode;
+import com.vaadin.shared.ui.ValueChangeMode;
 import com.vaadin.ui.Button;
-import com.vaadin.ui.Button.ClickEvent;
 import com.vaadin.ui.ComboBox;
 import com.vaadin.ui.Component;
 import com.vaadin.ui.Grid;
+import com.vaadin.ui.Grid.Column;
 import com.vaadin.ui.Grid.SelectionMode;
-import com.vaadin.ui.Grid.SingleSelectionModel;
 import com.vaadin.ui.GridLayout;
 import com.vaadin.ui.HorizontalLayout;
+import com.vaadin.ui.Image;
 import com.vaadin.ui.Label;
 import com.vaadin.ui.Layout;
+import com.vaadin.ui.Link;
 import com.vaadin.ui.Notification;
 import com.vaadin.ui.Panel;
 import com.vaadin.ui.TextField;
 import com.vaadin.ui.VerticalLayout;
-import com.vaadin.ui.renderers.HtmlRenderer;
+import com.vaadin.ui.components.grid.HeaderRow;
+import com.vaadin.ui.renderers.ComponentRenderer;
 import com.vaadin.ui.renderers.ImageRenderer;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
@@ -33,11 +34,9 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 import javax.json.Json;
 import javax.json.JsonObject;
 import javax.json.JsonReader;
@@ -48,6 +47,7 @@ import life.qbic.omero.BasicOMEROClient;
 import life.qbic.portal.utils.ConfigurationManager;
 import life.qbic.portal.utils.ConfigurationManagerFactory;
 import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpException;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
@@ -79,7 +79,7 @@ public class OMEROClientPortlet extends QBiCPortletUI {
 
     ///////////////////////////////
 
-    private HashMap<String, Long> revProjMap;
+    private HashMap<String, Long> revProjMap = new HashMap<String, Long>();
     private HashMap<String, Long> revDsMap;
 
     private ConfigurationManager cm = ConfigurationManagerFactory.getInstance();
@@ -97,6 +97,25 @@ public class OMEROClientPortlet extends QBiCPortletUI {
     private JsonObject ctx;
 
     private String omeroSessionKey;
+    private BasicOMEROClient omeroClient;
+    private final ArrayList<Project> projects;
+    /**
+     * Contains samples to be displayed
+     */
+    private final List<Sample> samples;
+    private final List<ImageInfo> imageInfos;
+    private ComboBox<Project> projectBox;
+    private Label projectLabel;
+    private Button refreshButton;
+    private Grid<Sample> sampleGrid;
+    private Grid<ImageInfo> imageInfoGrid;
+
+    public OMEROClientPortlet() {
+        projects = new ArrayList<>();
+        revProjMap = new HashMap<String, Long>();
+        samples = new ArrayList<>();
+        imageInfos = new ArrayList<>();
+    }
 
     /////////////////////////////
 
@@ -107,6 +126,7 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         //////////////////////////////
         //omero json client
 
+        //FIXME remove hard coded url
         this.baseURL = "http://134.2.183.129/omero/api/v0/";
 
         this.requestURL = this.baseURL;
@@ -125,11 +145,18 @@ public class OMEROClientPortlet extends QBiCPortletUI {
             this.omeroSessionKey = ctx.getString("sessionUuid");
 
             LOG.info(ctx.toString());
-
         } catch (Exception e) {
-            LOG.error("-->json login fail:");
+            LOG.error("Omero json login failed.");
             LOG.debug(e);
+            return new VerticalLayout();
+        }
 
+        try {
+            omeroClient = new BasicOMEROClient(cm.getOmeroUser(), cm.getOmeroPassword(), cm.getOmeroHostname(), Integer.parseInt(cm.getOmeroPort()));
+        } catch (Exception e) {
+            LOG.error("Unexpected exception during omero client creation.");
+            LOG.debug(e);
+            return new VerticalLayout();
         }
 
         ///////////////////////
@@ -152,9 +179,10 @@ public class OMEROClientPortlet extends QBiCPortletUI {
 
     private Panel getImgViewer() {
 
+        loadProjects();
+
         Panel imgViewerPanel = new Panel("Image Viewer");
-        imgViewerPanel.setWidth("100%");
-        imgViewerPanel.setHeight("100%");
+        imgViewerPanel.setSizeFull();
 
         VerticalLayout panelContent = new VerticalLayout();
         panelContent.setSpacing(true);
@@ -174,35 +202,15 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         topPanelLayout.setWidth("50%");
         topPanelLayout.setHeight("100%");
 
-        ComboBox projectBox = new ComboBox("Select project:");
-        projectBox.setInvalidAllowed(false);
-        projectBox.setNullSelectionAllowed(false);
+        projectBox = new ComboBox<>("Select project:");
+        projectBox.setEmptySelectionAllowed(false);
         projectBox.setWidth("100%");
-        projectBox.setImmediate(true);
+        projectBox.setDataProvider(new ListDataProvider<>(projects));
+        projectBox.setItemCaptionGenerator(Project::getName);
 
+        projectLabel = new Label("<br>", ContentMode.HTML);
 
-        BasicOMEROClient oc = new BasicOMEROClient(cm.getOmeroUser(), cm.getOmeroPassword(), cm.getOmeroHostname(), Integer.parseInt(cm.getOmeroPort()));
-
-
-        oc.connect();
-
-        HashMap<Long, String> projectMap = oc.loadProjects();
-        oc.disconnect();
-
-        revProjMap = new HashMap<String, Long>();
-
-        Set set = projectMap.entrySet();
-        Iterator iterator = set.iterator();
-        while (iterator.hasNext()) {
-            Map.Entry entry = (Map.Entry) iterator.next();
-            projectBox.addItem(entry.getValue());
-
-            revProjMap.put((String)entry.getValue(), (Long)entry.getKey());
-        }
-
-        Label projectLabel = new Label("<br>", ContentMode.HTML);
-
-        Button refreshButton = new Button("Refresh");
+        refreshButton = new Button("Refresh");
         refreshButton.setWidth("100%");
 
         projectLayout.addComponent(projectBox);
@@ -223,248 +231,209 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         ///////////////////////
         // sample grid
 
-        IndexedContainer sampleGridContainer = new IndexedContainer();
+        sampleGrid = new Grid<>();
 
-        sampleGridContainer.addContainerProperty("Code", String.class, "-null");
-        sampleGridContainer.addContainerProperty("Name", String.class, "-null");
-
-        Grid sampleGrid = new Grid(sampleGridContainer);
-        sampleGrid.setCaption("Samples");
+        ListDataProvider<Sample> sampleListDataProvider = new ListDataProvider<>(samples);
+        sampleGrid.setDataProvider(sampleListDataProvider);
         sampleGrid.setSelectionMode(SelectionMode.SINGLE);
-        sampleGrid.setWidth("100%");
-        sampleGrid.setHeight("100%");
+        sampleGrid.setCaption("Samples");
+        sampleGrid.setSizeFull();
 
-        /////////////
-        //add filters
 
-        // Create a header row to hold column filters
-        Grid.HeaderRow filterRow = sampleGrid.appendHeaderRow();
-        // Set up a filter for all columns
-        for (Object pid: sampleGrid.getContainerDataSource().getContainerPropertyIds()) {
+        Column<Sample, String> sampleCodeColumn = sampleGrid.addColumn(Sample::getCode).setCaption("Code");
+        Column<Sample, String> sampleNameColumn = sampleGrid.addColumn(Sample::getName).setCaption("Name");
 
-            Grid.HeaderCell cell = filterRow.getCell(pid);
+        HeaderRow sampleFilterRow = sampleGrid.appendHeaderRow();
 
-            // Have an input field to use for filter
-            TextField filterField = new TextField();
-            filterField.setColumns(8);
-
-            // Update filter When the filter input is changed
-            filterField.addTextChangeListener(change -> {
-                // Can't modify filters so need to replace
-                sampleGridContainer.removeContainerFilters(pid);
-
-                // (Re)create the filter if necessary
-                if (! change.getText().isEmpty())
-                    sampleGridContainer.addContainerFilter(
-                            new SimpleStringFilter(pid,
-                                    change.getText(), true, false));
-            });
-            cell.setComponent(filterField);
-        }
+        setupColumnFilter(sampleListDataProvider, sampleCodeColumn, sampleFilterRow);
+        setupColumnFilter(sampleListDataProvider, sampleNameColumn, sampleFilterRow);
 
         ///////////////////
         //image grid
+        imageInfoGrid = new Grid<>();
+        Column<ImageInfo, Component> imageThumbnailColumn = imageInfoGrid.addColumn(imageInfo -> {
+            Resource thumbnailResource = new ExternalResource("data:image/jpeg;base64,"+ Base64.encodeBase64String(imageInfo.getThumbnail()));
+            Image thumbnailImage = new Image("",thumbnailResource);
+            return (Component) thumbnailImage;
+        }).setCaption("Thumbnail");
+        Column<ImageInfo, String> imageNameColumn = imageInfoGrid.addColumn(ImageInfo::getName).setCaption("Name");
+        Column<ImageInfo, String> imageSizeColumn = imageInfoGrid.addColumn(ImageInfo::getSize).setCaption("Size (X,Y,Z)");
+        Column<ImageInfo, String> imageTpsColumn = imageInfoGrid.addColumn(ImageInfo::getTimePoints).setCaption("Image Time Points");
+        Column<ImageInfo, String> imageChannelsColumn = imageInfoGrid.addColumn(ImageInfo::getChannels).setCaption("Channels");
+        Column<ImageInfo, Component> imageFullColumn = imageInfoGrid.addColumn(imageInfo -> {
+            Link fullImageLink = linkToFullImage(imageInfo.getImageId());
+            return (Component) fullImageLink;
+        }).setCaption("Full Image");
 
-        IndexedContainer imageGridContainer = new IndexedContainer();
+        imageThumbnailColumn.setRenderer(new ComponentRenderer());
+        imageFullColumn.setRenderer(new ComponentRenderer());
 
-        imageGridContainer.addContainerProperty("Thumbnail", Resource.class, null);
-        imageGridContainer.addContainerProperty("Name", String.class, "");
-        imageGridContainer.addContainerProperty("Size (X, Y, Z)", String.class, "");
-        imageGridContainer.addContainerProperty("Image Time Points", String.class, "");
-        imageGridContainer.addContainerProperty("Channels", String.class, "");
-        imageGridContainer.addContainerProperty("Full Image", String.class, "");
-        imageGridContainer.addContainerProperty("Image Download", Component.class, null);
 
-        Grid imageGrid = new Grid(imageGridContainer);
-        imageGrid.setCaption("Images");
-        imageGrid.setWidth("100%");
-        imageGrid.setHeight("100%");
-        imageGrid.setSelectionMode(SelectionMode.NONE);
-        imageGrid.setStyleName("gridwithpics100px");
+        ListDataProvider<ImageInfo> imageListProvider = new ListDataProvider<>(imageInfos);
+        imageInfoGrid.setDataProvider(imageListProvider);
+        imageInfoGrid.setCaption("Images");
+        imageInfoGrid.setSelectionMode(SelectionMode.NONE);
+        imageInfoGrid.setSizeFull();
+        imageInfoGrid.setStyleName("gridwithpics100px");
 
-        // Set the renderers
-        imageGrid.getColumn("Thumbnail").setRenderer(new ImageRenderer());
-        imageGrid.getColumn("Full Image").setRenderer(new HtmlRenderer());
+        HeaderRow imageFilterRow = imageInfoGrid.appendHeaderRow();
 
-        /////////////
-        //add filters
-
-        // Create a header row to hold column filters
-        filterRow = imageGrid.appendHeaderRow();
-        // Set up a filter for all columns
-        for (Object pid: imageGrid.getContainerDataSource().getContainerPropertyIds()) {
-
-            if(pid.toString().equals("Thumbnail") || pid.toString().equals("Full Image")){
-                continue;
-            }
-
-            Grid.HeaderCell cell = filterRow.getCell(pid);
-
-            // Have an input field to use for filter
-            TextField filterField = new TextField();
-            filterField.setColumns(8);
-
-            // Update filter When the filter input is changed
-            filterField.addTextChangeListener(change -> {
-                // Can't modify filters so need to replace
-                imageGridContainer.removeContainerFilters(pid);
-
-                // (Re)create the filter if necessary
-                if (! change.getText().isEmpty())
-                    imageGridContainer.addContainerFilter(
-                            new SimpleStringFilter(pid,
-                                    change.getText(), true, false));
-            });
-            cell.setComponent(filterField);
-        }
+        setupColumnFilter(imageListProvider, imageNameColumn, imageFilterRow);
+        setupColumnFilter(imageListProvider, imageSizeColumn, imageFilterRow);
+        setupColumnFilter(imageListProvider, imageTpsColumn, imageFilterRow);
+        setupColumnFilter(imageListProvider, imageChannelsColumn, imageFilterRow);
 
         /////////////////////////////////////
 
         hsplit.addComponent(sampleGrid, 0, 0, 1, 1);
-        hsplit.addComponent(imageGrid, 2,0, 5,1);
+        hsplit.addComponent(imageInfoGrid, 2,0, 5,1);
 
         panelContent.addComponent(hsplit);
 
         imgViewerPanel.setContent(panelContent);
 
         ////////////////////////////////////////////////////////////////////////
-
-        projectBox.addValueChangeListener(new ValueChangeListener() {
-            public void valueChange(ValueChangeEvent event) {
-
-                if (projectBox.getValue() == null) {
-                    return;
-                }
-
-                imageGrid.getContainerDataSource().removeAllItems();
-
-                String projName = projectBox.getValue().toString();
-                long projId = ((Long)revProjMap.get(projName)).longValue();
-
-                oc.connect();
-
-                HashMap<String, String> projInfoMap = oc.getProjectInfo(projId);
-                projectLabel.setValue("<b>" + projName + "</b><br>" + projInfoMap.get("desc"));
-
-
-                HashMap<Long, HashMap<String, String>> datasetList = oc.getDatasets(revProjMap.get(projName));
-                oc.disconnect();
-
-                sampleGrid.getContainerDataSource().removeAllItems();
-
-                Set dsSet = datasetList.entrySet();
-                Iterator dsIt = dsSet.iterator();
-
-                revDsMap = new HashMap<String, Long>();
-
-                while (dsIt.hasNext()) {
-                    Map.Entry dsEntry = (Map.Entry) dsIt.next();
-
-                    HashMap<String, String> datasetInfo = (HashMap<String, String>)dsEntry.getValue();
-
-                    sampleGrid.addRow(datasetInfo.get("name"), datasetInfo.get("desc"));
-
-
-                    revDsMap.put(datasetInfo.get("name"), (Long)dsEntry.getKey());
-                }
-        }});
-
-        refreshButton.addClickListener(new Button.ClickListener() {
-            public void buttonClick(ClickEvent event) {
-
-                imageGrid.getContainerDataSource().removeAllItems();
-                projectLabel.setValue("<br>");
-                sampleGrid.getContainerDataSource().removeAllItems();
-
-                projectBox.getContainerDataSource().removeAllItems();
-                projectBox.setValue(null);
-
-
-                oc.connect();
-                HashMap<Long, String> projectMap = oc.loadProjects();
-                oc.disconnect();
-
-                revProjMap = new HashMap<String, Long>();
-
-                Set set = projectMap.entrySet();
-                Iterator iterator = set.iterator();
-                while (iterator.hasNext()) {
-                    Map.Entry entry = (Map.Entry) iterator.next();
-                    projectBox.addItem(entry.getValue());
-
-                    revProjMap.put((String)entry.getValue(), (Long)entry.getKey());
-                }
-
-                Notification.show("Refresh done");
-            }
-        });
-
-        sampleGrid.addSelectionListener(selectionEvent -> {
-
-            Object selected = ((SingleSelectionModel)sampleGrid.getSelectionModel()).getSelectedRow();
-
-            if (selected != null){
-
-                String sampleName = (String)sampleGrid.getContainerDataSource().getItem(selected).getItemProperty("Code").getValue();
-
-                oc.connect();
-                HashMap<Long, String> imageList = oc.getImages(revDsMap.get(sampleName));
-
-
-                Set imgSet = imageList.entrySet();
-                Iterator imgIt = imgSet.iterator();
-
-                imageGrid.getContainerDataSource().removeAllItems();
-
-                int i = 0;
-                long imageId;
-                while (imgIt.hasNext()) {
-                    Map.Entry imgEntry = (Map.Entry) imgIt.next();
-                    imageId = (long)imgEntry.getKey();
-
-                    HashMap<String, String> imageInfoMap = oc.getImageInfo(revDsMap.get(sampleName), imageId);
-                    String size = imageInfoMap.get("size");
-                    String tps  = imageInfoMap.get("tps");
-                    String chl  = imageInfoMap.get("channels");
-
-                    try{
-
-                        ByteArrayInputStream imgThum = oc.getThumbnail(revDsMap.get(sampleName), imageId);
-
-
-                        byte[] targetArray = new byte[imgThum.available()];
-                        imgThum.read(targetArray);
-
-                        String link = "<div style=\"display:flex; height:100%; width:100%\"> <div style=\"margin: auto;\">" +
-                                "<input type=\"button\" value=\"Open\" onclick=\"window.open('" + "http://134.2.183.129/omero/webclient/img_detail/" + String.valueOf(imgEntry.getKey()) + "/?server=1&bsession=" + this.omeroSessionKey + "', '_blank')\">" +
-                                "</div></div>";
-
-                        ImageDownloader imageDownloader = new ImageDownloader(imageId);
-                        imageGrid.addRow(new ExternalResource("data:image/jpeg;base64,"+Base64.encodeBase64String(targetArray)), imgEntry.getValue(), size, tps, chl, link, imageDownloader);
-
-
-
-
-                    } catch (Exception e) {
-                        LOG.error(e);
-                    }
-
-
-                    i++;
-
-                }
-
-                oc.disconnect();
-
-            }
-
-
-        });
-
-        ////////////////////////////////////////////
+        registerListeners();
 
         return imgViewerPanel;
+    }
 
+    private void registerListeners() {
+        // Project selection
+        projectBox.addSelectionListener(event -> {
+            if (event.getSelectedItem().isPresent()) {
+                Project selectedProject = event.getSelectedItem().get();
+                // update label
+                projectLabel.setValue("<b>" + selectedProject.getName() + "</b><br>"
+                    + selectedProject.getDescription());
+                // clear unrelated samples
+                imageInfos.clear();
+                samples.clear();
+                // load new samples
+                //FIXME please remove crazy HashMap stuff
+                HashMap<Long, HashMap<String, String>> projectSamples = omeroClient
+                    .getDatasets(selectedProject.getId());
+                projectSamples.forEach( (sampleId,sampleInfo) -> {
+                    String sampleCode = sampleInfo.get("name");
+                    String sampleName = sampleInfo.get("desc");
+                    Sample sample = new Sample(sampleId, sampleName, sampleCode);
+                    samples.add(sample);
+                });
+                refreshGrid(imageInfoGrid);
+                refreshGrid(sampleGrid);
+
+            } else {
+                projectLabel.setValue("");
+            }
+        });
+
+        sampleGrid.addSelectionListener(event -> {
+            imageInfos.clear();
+            if (event.getFirstSelectedItem().isPresent()) {
+                Sample selectedSample = event.getFirstSelectedItem().get();
+                //TODO load datasets
+                HashMap<Long, String> sampleImageMap = omeroClient.getImages(selectedSample.getId());
+                sampleImageMap.forEach( (imageId, ignoredImageName) -> {
+                    //FIXME replace crazy hashmap stuff
+                    HashMap<String, String> imageInformationMap = omeroClient.getImageInfo(selectedSample.getId(), imageId);
+
+                    byte[] thumbnail = new byte[0];
+                    String imageDescription = imageInformationMap.get("desc");
+                    String imageName = imageInformationMap.get("name");
+                    String imageSize = imageInformationMap.get("size");
+                    String imageTimePoints = imageInformationMap.get("tps");
+                    String imageChannels = imageInformationMap.get("channels");
+                    //FIXME thumbnail image
+                    try {
+                        ByteArrayInputStream thumbnailInputStream = omeroClient.getThumbnail(selectedSample.getId(), imageId);
+                        thumbnail = new byte[thumbnailInputStream.available()];
+                        // ignore integer and store in byte array
+                        thumbnailInputStream.read(thumbnail);
+                        thumbnailInputStream.close();
+                    } catch (Exception e) {
+                        LOG.error("Could not retrieve thumbnail for image:" + imageId);
+                        LOG.debug(e);
+                    }
+                    ImageInfo imageInfo = new ImageInfo(imageId, imageName, thumbnail, imageSize, imageTimePoints, imageChannels);
+                    imageInfos.add(imageInfo);
+                });
+            } else {
+                //remove selected images
+                imageInfos.clear();
+            }
+            refreshGrid(imageInfoGrid);
+        });
+
+        refreshButton.addClickListener(event -> {
+            imageInfos.clear();
+            samples.clear();
+            projects.clear();
+            projectBox.setSelectedItem(null);
+            loadProjects();
+            refreshGrid(imageInfoGrid);
+            refreshGrid(sampleGrid);
+            Notification.show("Refresh was performed.");
+        });
+    }
+
+    /**
+     * Loads projects from omero into {@link OMEROClientPortlet#projects}
+     */
+    private void loadProjects() {
+        projects.clear();
+        omeroClient.connect();
+        //FIXME remove crazy HashMap stuff
+        HashMap<Long, String> projectMap = omeroClient.loadProjects();
+        omeroClient.disconnect();
+
+        for (Entry<Long, String> entry : projectMap.entrySet()) {
+            revProjMap.put(entry.getValue(), entry.getKey());
+            Long projectId = entry.getKey();
+
+            HashMap<String, String> projectInfo = omeroClient.getProjectInfo(projectId);
+
+            Project project = new Project(projectId, projectInfo.get("name"), projectInfo.get("desc"));
+            projects.add(project);
+        }
+    }
+
+    /**
+     *
+     * @param imageId the image for which a link should be generated
+     * @return a vaadin {@link Link} component
+     */
+    private Link linkToFullImage(long imageId) {
+        String omeroUrl = cm.getOmeroHostname();
+        String requestUrl = "/omero/webclient/img_detail/" + imageId + "?server=1&bsession=" + this.omeroSessionKey;
+        String url = "http://" + omeroUrl + requestUrl;
+        Resource fullImage = new ExternalResource(url);
+        Link fullImageLink = new Link("Open Image", fullImage);
+        fullImageLink.setTargetName("_blank");
+        return fullImageLink;
+    }
+
+    private void refreshGrid(Grid<?> grid) {
+        grid.getDataProvider().refreshAll();
+    }
+
+    /**
+     * This method creates a TextField to filter a given column
+     * @param dataProvider a {@link ListDataProvider} on which the filtering is applied on
+     * @param column the column to be filtered
+     * @param headerRow a {@link HeaderRow} to the corresponding {@link Grid}
+     */
+    private <T> void setupColumnFilter(ListDataProvider<T> dataProvider,
+        Column<T, String> column, HeaderRow headerRow) {
+        TextField filterTextField = new TextField();
+        filterTextField.addValueChangeListener(event -> {
+            dataProvider.addFilter(element ->
+                StringUtils.containsIgnoreCase(column.getValueProvider().apply(element), filterTextField.getValue())
+            );
+        });
+        filterTextField.setValueChangeMode(ValueChangeMode.EAGER);
+
+        headerRow.getCell(column).setComponent(filterTextField);
+        filterTextField.setSizeFull();
     }
 
     //////////////////////////////////
