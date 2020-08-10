@@ -1,10 +1,9 @@
 package life.qbic.portal.portlet;
 
 /**
- * <short description>
+ * A DTO object for information on an imaging project
  * <p>
- * <detailed description>
- *
+ * This object acts as a data transfer object to deliver data for the portlet to display.
  */
 public class Project {
 
