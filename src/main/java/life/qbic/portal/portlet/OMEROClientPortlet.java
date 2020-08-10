@@ -316,7 +316,6 @@ public class OMEROClientPortlet extends QBiCPortletUI {
                 imageInfos.clear();
                 samples.clear();
                 // load new samples
-                //FIXME please remove crazy HashMap stuff
                 HashMap<Long, HashMap<String, String>> projectSamples = omeroClient
                     .getDatasets(selectedProject.getId());
                 projectSamples.forEach( (sampleId,sampleInfo) -> {
@@ -337,10 +336,8 @@ public class OMEROClientPortlet extends QBiCPortletUI {
             imageInfos.clear();
             if (event.getFirstSelectedItem().isPresent()) {
                 Sample selectedSample = event.getFirstSelectedItem().get();
-                //TODO load datasets
                 HashMap<Long, String> sampleImageMap = omeroClient.getImages(selectedSample.getId());
                 sampleImageMap.forEach( (imageId, ignoredImageName) -> {
-                    //FIXME replace crazy hashmap stuff
                     HashMap<String, String> imageInformationMap = omeroClient.getImageInfo(selectedSample.getId(), imageId);
 
                     byte[] thumbnail = new byte[0];
@@ -349,7 +346,6 @@ public class OMEROClientPortlet extends QBiCPortletUI {
                     String imageSize = imageInformationMap.get("size");
                     String imageTimePoints = imageInformationMap.get("tps");
                     String imageChannels = imageInformationMap.get("channels");
-                    //FIXME thumbnail image
                     try {
                         ByteArrayInputStream thumbnailInputStream = omeroClient.getThumbnail(selectedSample.getId(), imageId);
                         thumbnail = new byte[thumbnailInputStream.available()];
@@ -388,7 +384,6 @@ public class OMEROClientPortlet extends QBiCPortletUI {
     private void loadProjects() {
         projects.clear();
         omeroClient.connect();
-        //FIXME remove crazy HashMap stuff
         HashMap<Long, String> projectMap = omeroClient.loadProjects();
         omeroClient.disconnect();
 
