@@ -425,8 +425,8 @@ public class OMEROClientPortlet extends QBiCPortletUI {
      */
     private Link linkToImageDownload(long imageId) {
         //TODO implement and replace `about:blank` with actual url
-        Resource downloadImageRessource = new ExternalResource("about:blank");
-        Link downloadImageLink = new Link("Download Image", downloadImageRessource);
+        Resource downloadImageResource = new ExternalResource("about:blank");
+        Link downloadImageLink = new Link("Download Image", downloadImageResource);
         downloadImageLink.setTargetName("_blank");
         return downloadImageLink;
     }
