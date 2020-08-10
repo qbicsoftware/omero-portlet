@@ -1,5 +1,8 @@
 package life.qbic.portal.portlet;
 
+import java.util.Arrays;
+import java.util.Objects;
+
 /**
  * A DTO object for information on an image
  * <p>
@@ -52,5 +55,29 @@ public class ImageInfo {
 
   public String getChannels() {
     return channels;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    ImageInfo imageInfo = (ImageInfo) o;
+    return imageId == imageInfo.imageId &&
+        name.equals(imageInfo.name) &&
+        Arrays.equals(thumbnail, imageInfo.thumbnail) &&
+        size.equals(imageInfo.size) &&
+        timePoints.equals(imageInfo.timePoints) &&
+        channels.equals(imageInfo.channels);
+  }
+
+  @Override
+  public int hashCode() {
+    int result = Objects.hash(imageId, name, size, timePoints, channels);
+    result = 31 * result + Arrays.hashCode(thumbnail);
+    return result;
   }
 }

@@ -1,5 +1,7 @@
 package life.qbic.portal.portlet;
 
+import java.util.Objects;
+
 /**
  * A DTO object for information on an imaging sample
  * <p>
@@ -30,6 +32,25 @@ public class Sample {
 
   public Long getId() {
     return id;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    Sample sample = (Sample) o;
+    return id.equals(sample.id) &&
+        name.equals(sample.name) &&
+        code.equals(sample.code);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(id, name, code);
   }
 
   @Override
