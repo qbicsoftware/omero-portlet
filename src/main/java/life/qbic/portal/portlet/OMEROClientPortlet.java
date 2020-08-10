@@ -1,5 +1,6 @@
 package life.qbic.portal.portlet;
 
+import IceInternal.Ex;
 import com.vaadin.annotations.Theme;
 import com.vaadin.annotations.Widgetset;
 import com.vaadin.data.provider.ListDataProvider;
@@ -264,9 +265,14 @@ public class OMEROClientPortlet extends QBiCPortletUI {
             Link fullImageLink = linkToFullImage(imageInfo.getImageId());
             return (Component) fullImageLink;
         }).setCaption("Full Image");
+        Column<ImageInfo, Component> downloadImageColumn = imageInfoGrid.addColumn(imageInfo -> {
+            Link downloadImageLink = linkToImageDownload(imageInfo.getImageId());
+            return (Component) downloadImageLink;
+        }).setCaption("Download Image");
 
         imageThumbnailColumn.setRenderer(new ComponentRenderer());
         imageFullColumn.setRenderer(new ComponentRenderer());
+        downloadImageColumn.setRenderer(new ComponentRenderer());
 
 
         ListDataProvider<ImageInfo> imageListProvider = new ListDataProvider<>(imageInfos);
@@ -410,6 +416,19 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         Link fullImageLink = new Link("Open Image", fullImage);
         fullImageLink.setTargetName("_blank");
         return fullImageLink;
+    }
+
+    /**
+     *
+     * @param imageId the image for which a download link should be generated
+     * @return a vaadin {@link Link} component linking to the download
+     */
+    private Link linkToImageDownload(long imageId) {
+        //TODO implement and replace `about:blank` with actual url
+        Resource downloadImageRessource = new ExternalResource("about:blank");
+        Link downloadImageLink = new Link("Download Image", downloadImageRessource);
+        downloadImageLink.setTargetName("_blank");
+        return downloadImageLink;
     }
 
     private void refreshGrid(Grid<?> grid) {
