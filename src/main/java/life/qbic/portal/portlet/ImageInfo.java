@@ -22,7 +22,7 @@ public class ImageInfo {
       String timePoints, String channels) {
     this.imageId = imageId;
     this.name = name;
-    this.thumbnail = thumbnail;
+    this.thumbnail = thumbnail.clone();
     this.size = size;
     this.timePoints = timePoints;
     this.channels = channels;
@@ -37,7 +37,9 @@ public class ImageInfo {
   }
 
   public byte[] getThumbnail() {
-    return thumbnail;
+    // Be careful! Object.clone works here because we have a primitive type.
+    // Non-primitive types would generate a shallow copy.
+    return this.thumbnail.clone();
   }
 
   public String getSize() {
