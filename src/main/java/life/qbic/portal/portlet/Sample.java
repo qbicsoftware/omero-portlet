@@ -34,6 +34,9 @@ public class Sample {
     return id;
   }
 
+  /**
+   * {@inheritDoc}
+   */
   @Override
   public boolean equals(Object o) {
     if (this == o) {
@@ -48,11 +51,17 @@ public class Sample {
         code.equals(sample.code);
   }
 
+  /**
+   * {@inheritDoc}
+   */
   @Override
   public int hashCode() {
     return Objects.hash(id, name, code);
   }
 
+  /**
+   * {@inheritDoc}
+   */
   @Override
   public String toString() {
     return "Sample{" +
