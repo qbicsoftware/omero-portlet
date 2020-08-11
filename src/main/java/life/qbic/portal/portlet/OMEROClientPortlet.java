@@ -25,7 +25,9 @@ import com.vaadin.ui.Notification;
 import com.vaadin.ui.Panel;
 import com.vaadin.ui.TextField;
 import com.vaadin.ui.VerticalLayout;
+import com.vaadin.ui.Window;
 import com.vaadin.ui.components.grid.HeaderRow;
+import com.vaadin.ui.renderers.ButtonRenderer;
 import com.vaadin.ui.renderers.ComponentRenderer;
 import com.vaadin.ui.renderers.ImageRenderer;
 import java.io.BufferedReader;
@@ -33,6 +35,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -43,6 +46,7 @@ import javax.json.JsonReader;
 import javax.json.JsonString;
 import javax.json.JsonStructure;
 import javax.json.JsonValue;
+import jdk.internal.org.objectweb.asm.tree.IincInsnNode;
 import life.qbic.omero.BasicOMEROClient;
 import life.qbic.portal.utils.ConfigurationManager;
 import life.qbic.portal.utils.ConfigurationManagerFactory;
@@ -265,9 +269,45 @@ public class OMEROClientPortlet extends QBiCPortletUI {
             Link fullImageLink = linkToFullImage(imageInfo.getImageId());
             return (Component) fullImageLink;
         }).setCaption("Full Image");
+        Column<ImageInfo, Button> imageMetadataColumn = imageInfoGrid.addColumn(imageInfo -> {
+            Button metadataButton = new Button("Show Metadata");
+            metadataButton.addClickListener(clickEvent -> {
+                Window metadataSubWindow = new Window("Metadata Sub-Window");
+                VerticalLayout metadataLayout = new VerticalLayout();
+
+                //TODO get metadata and add components
+                Collection<MetadataProperty> metadataProperties = new ArrayList<>();
+                for (int i = 0; i < 5; i++) {
+                    metadataProperties.add(new MetadataProperty<Integer>("property"+i, i, "example property no."+i));
+                }
+
+
+                Grid<MetadataProperty> metadataGrid = new Grid<>();
+                metadataGrid.setDataProvider(new ListDataProvider<MetadataProperty>(metadataProperties));
+                metadataGrid.setSelectionMode(SelectionMode.NONE);
+
+                Column<MetadataProperty, String> nameColumn = metadataGrid.addColumn(
+                    MetadataProperty::getName).setCaption("Name");
+                Column<MetadataProperty, String> valueColumn = metadataGrid.addColumn(metadataProperty -> {
+                    return metadataProperty.getValue().toString();
+                }).setCaption("Value");
+                Column<MetadataProperty, String> descriptionColumn = metadataGrid.addColumn(
+                    MetadataProperty::getDescription).setCaption("Description");
+                metadataLayout.addComponent(metadataGrid);
+
+                metadataSubWindow.setContent(metadataLayout);
+                metadataSubWindow.setModal(true);
+                metadataSubWindow.setResizable(false);
+                metadataSubWindow.center();
+                addWindow(metadataSubWindow);
+            });
+            return metadataButton;
+        }).setCaption("Metadata");
+
         /////////////
         imageThumbnailColumn.setRenderer(new ComponentRenderer());
         imageFullColumn.setRenderer(new ComponentRenderer());
+        imageMetadataColumn.setRenderer(new ComponentRenderer());
 
 
         ListDataProvider<ImageInfo> imageListProvider = new ListDataProvider<>(imageInfos);
