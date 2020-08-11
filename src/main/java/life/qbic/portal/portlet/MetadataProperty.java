@@ -52,7 +52,7 @@ public class MetadataProperty<T> {
   public String toString() {
     return "MetadataProperty{" +
         "name='" + name + '\'' +
-        ", description='" + description + '\'' +
+        ", value=" + value +
         '}';
   }
 }
