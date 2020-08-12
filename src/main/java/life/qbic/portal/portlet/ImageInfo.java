@@ -57,6 +57,9 @@ public class ImageInfo {
     return channels;
   }
 
+  /**
+   * {@inheritDoc}
+   */
   @Override
   public boolean equals(Object o) {
     if (this == o) {
@@ -74,6 +77,9 @@ public class ImageInfo {
         channels.equals(imageInfo.channels);
   }
 
+  /**
+   * {@inheritDoc}
+   */
   @Override
   public int hashCode() {
     int result = Objects.hash(imageId, name, size, timePoints, channels);
