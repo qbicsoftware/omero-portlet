@@ -35,6 +35,9 @@ public class Project {
     return description;
   }
 
+  /**
+   * {@inheritDoc}
+   */
   @Override
   public boolean equals(Object o) {
     if (this == o) {
@@ -49,6 +52,9 @@ public class Project {
         description.equals(project.description);
   }
 
+  /**
+   * {@inheritDoc}
+   */
   @Override
   public int hashCode() {
     return Objects.hash(id, name, description);
