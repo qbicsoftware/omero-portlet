@@ -46,6 +46,8 @@ import javax.json.JsonValue;
 import life.qbic.omero.BasicOMEROClient;
 import life.qbic.portal.utils.ConfigurationManager;
 import life.qbic.portal.utils.ConfigurationManagerFactory;
+import omero.model.NamedValue;
+import omero.gateway.model.MapAnnotationData;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpException;
@@ -263,10 +265,25 @@ public class OMEROClientPortlet extends QBiCPortletUI {
 
                 //TODO get metadata and add components
                 Collection<MetadataProperty> metadataProperties = new ArrayList<>();
-                for (int i = 0; i < 5; i++) {
-                    metadataProperties.add(new MetadataProperty<Integer>("property"+i, i, "example property no."+i));
-                }
+                long currentImageId = imageInfo.getImageId();
+                try {
+                    List metadataList = omeroClient.fetchMapAnnotationDataForImage(currentImageId);
+                    for (int i = 0; i < metadataList.size(); i++) {
+                        MapAnnotationData currentMapAnnotation = (MapAnnotationData) metadataList.get(i);
+                        List<NamedValue> list = (List<NamedValue>) currentMapAnnotation
+                            .getContent();
+                        for (NamedValue namedValue : list) {
+                            String metaDataKey = namedValue.name;
+                            String metaDataValue = namedValue.value;
+                            metadataProperties.add(new MetadataProperty<String>("Key: " + metaDataKey, "Value " + metaDataValue, "example property no."));
+                    }
+                    }
 
+                } catch (Exception e) {
+                    LOG.error("Could not retrieve metadata for image:" + currentImageId);
+                    System.out.println(e.toString());
+                    LOG.debug(e);
+                }
 
                 Grid<MetadataProperty> metadataGrid = new Grid<>();
                 metadataGrid.setDataProvider(new ListDataProvider<MetadataProperty>(metadataProperties));
