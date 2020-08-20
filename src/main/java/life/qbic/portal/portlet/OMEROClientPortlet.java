@@ -269,7 +269,16 @@ public class OMEROClientPortlet extends QBiCPortletUI {
                 return (Component) noFullImageLabel;
             }
         }).setCaption("Full Image");
-        Column<ImageInfo, Button> imageMetadataColumn = imageInfoGrid.addColumn(imageInfo -> metadataButton(imageInfo.getImageId())).setCaption("Metadata");
+        Column<ImageInfo, Component> imageMetadataColumn = imageInfoGrid.addColumn(imageInfo -> {
+            // Exceptions need to be handled here since they are event based and do not bubble up
+            try {
+                return (Component) metadataButton(imageInfo.getImageId());
+            } catch (Exception e) {
+                LOG.error("Could not create metadata component for imageId: " + imageInfo.getImageId());
+                LOG.debug(e);
+                Label noMetadataLabel = new Label("");
+                return (Component) noMetadataLabel;
+            }).setCaption("Metadata");
       
         imageThumbnailColumn.setRenderer(new ComponentRenderer());
         imageFullColumn.setRenderer(new ComponentRenderer());
