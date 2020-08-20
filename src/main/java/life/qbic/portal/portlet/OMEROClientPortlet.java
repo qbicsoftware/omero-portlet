@@ -281,7 +281,6 @@ public class OMEROClientPortlet extends QBiCPortletUI {
 
                 } catch (Exception e) {
                     LOG.error("Could not retrieve metadata for image:" + currentImageId);
-                    System.out.println(e.toString());
                     LOG.debug(e);
                 }
 
