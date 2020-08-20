@@ -258,10 +258,19 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         Column<ImageInfo, String> imageSizeColumn = imageInfoGrid.addColumn(ImageInfo::getSize).setCaption("Size (X,Y,Z)");
         Column<ImageInfo, String> imageTpsColumn = imageInfoGrid.addColumn(ImageInfo::getTimePoints).setCaption("Image Time Points");
         Column<ImageInfo, String> imageChannelsColumn = imageInfoGrid.addColumn(ImageInfo::getChannels).setCaption("Channels");
-        Column<ImageInfo, Component> imageFullColumn = imageInfoGrid.addColumn(imageInfo -> (Component) linkToFullImage(imageInfo.getImageId())).setCaption("Full Image");
+        Column<ImageInfo, Component> imageFullColumn = imageInfoGrid.addColumn(imageInfo -> {
+            // Exceptions need to be handled here since they are event based and do not bubble up
+            try{
+                return (Component) linkToFullImage(imageInfo.getImageId());
+            } catch (Exception e) {
+                LOG.error("Could not generate full image link for imageId: " + imageInfo.getImageId());
+                LOG.debug(e);
+                Label noFullImageLabel = new Label("Not available.");
+                return (Component) noFullImageLabel;
+            }
+        }).setCaption("Full Image");
         Column<ImageInfo, Button> imageMetadataColumn = imageInfoGrid.addColumn(imageInfo -> metadataButton(imageInfo.getImageId())).setCaption("Metadata");
-
-        /////////////
+      
         imageThumbnailColumn.setRenderer(new ComponentRenderer());
         imageFullColumn.setRenderer(new ComponentRenderer());
         imageMetadataColumn.setRenderer(new ComponentRenderer());
