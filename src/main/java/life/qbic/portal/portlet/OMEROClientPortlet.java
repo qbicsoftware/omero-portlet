@@ -68,10 +68,12 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 /**
- * Entry point for portlet omero-client-portlet. This class derives from {@link QBiCPortletUI},
- * which is found in the {@code portal-utils-lib} library.
+ * Entry point for the portlet omero-client-portlet.
  *
+ * This class derives from {@link QBiCPortletUI}, which can be found in the
+ * @code portal-utils-lib library.
  * @see <a href=https://github.com/qbicsoftware/portal-utils-lib>portal-utils-lib</a>
+ * @since 1.0.0
  */
 @Theme("mytheme")
 @SuppressWarnings("serial")
