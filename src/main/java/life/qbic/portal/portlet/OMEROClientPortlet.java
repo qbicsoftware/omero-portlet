@@ -273,12 +273,12 @@ public class OMEROClientPortlet extends QBiCPortletUI {
             // Exceptions need to be handled here since they are event based and do not bubble up
             try {
                 return (Component) metadataButton(imageInfo.getImageId());
-            } catch (Exception e) {
+            }catch (Exception e) {
                 LOG.error("Could not create metadata component for imageId: " + imageInfo.getImageId());
                 LOG.debug(e);
                 Label noMetadataLabel = new Label("");
                 return (Component) noMetadataLabel;
-            }).setCaption("Metadata");
+            }}).setCaption("Metadata");
       
         imageThumbnailColumn.setRenderer(new ComponentRenderer());
         imageFullColumn.setRenderer(new ComponentRenderer());
@@ -450,11 +450,12 @@ public class OMEROClientPortlet extends QBiCPortletUI {
             }
 
         } catch (Exception e) {
-            LOG.error("Could not retrieve metadata for image:" + imageId);
-            LOG.debug(e);
+
+            return metadataButton;
 
         }
         metadataButton.addClickListener(clickEvent -> {
+            try {
             Window metadataSubWindow = new Window("Metadata Sub-Window");
             VerticalLayout metadataLayout = new VerticalLayout();
 
@@ -476,6 +477,12 @@ public class OMEROClientPortlet extends QBiCPortletUI {
             metadataSubWindow.setResizable(false);
             metadataSubWindow.center();
             addWindow(metadataSubWindow);
+            }
+            catch (Exception e)
+            {
+                LOG.error("Could not generate metadata subwindow for imageId: " + imageId);
+                LOG.debug(e);
+            }
         });
         return metadataButton;
     }
