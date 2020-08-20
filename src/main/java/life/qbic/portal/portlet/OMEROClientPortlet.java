@@ -282,6 +282,7 @@ public class OMEROClientPortlet extends QBiCPortletUI {
                 } catch (Exception e) {
                     LOG.error("Could not retrieve metadata for image:" + currentImageId);
                     LOG.debug(e);
+                    metadataButton.setEnabled(false);
                 }
 
                 Grid<MetadataProperty> metadataGrid = new Grid<>();
