@@ -279,7 +279,7 @@ public class OMEROClientPortlet extends QBiCPortletUI {
                 Label noMetadataLabel = new Label("");
                 return (Component) noMetadataLabel;
             }}).setCaption("Metadata");
-      
+
         imageThumbnailColumn.setRenderer(new ComponentRenderer());
         imageFullColumn.setRenderer(new ComponentRenderer());
         imageMetadataColumn.setRenderer(new ComponentRenderer());
@@ -431,6 +431,31 @@ public class OMEROClientPortlet extends QBiCPortletUI {
      * @param imageId the id of the image for which the metadata should be retrieved
      * @return a vaadin Button component
      */
+    private Window metadataWindow(Collection<MetadataProperty> metadataProperties)
+    {
+        Window metadataWindow = new Window("Metadata Sub-Window");
+        VerticalLayout metadataLayout = new VerticalLayout();
+
+        Grid<MetadataProperty> metadataGrid = new Grid<>();
+        metadataGrid.setDataProvider(new ListDataProvider<MetadataProperty>(metadataProperties));
+        metadataGrid.setSelectionMode(SelectionMode.NONE);
+
+        Column<MetadataProperty, String> nameColumn = metadataGrid.addColumn(
+            MetadataProperty::getName).setCaption("Name");
+        Column<MetadataProperty, String> valueColumn = metadataGrid.addColumn(metadataProperty -> {
+            return metadataProperty.getValue().toString();
+        }).setCaption("Value");
+        Column<MetadataProperty, String> descriptionColumn = metadataGrid.addColumn(
+            MetadataProperty::getDescription).setCaption("Description");
+        metadataLayout.addComponent(metadataGrid);
+
+        metadataWindow.setContent(metadataLayout);
+        metadataWindow.setModal(true);
+        metadataWindow.setResizable(false);
+        metadataWindow.center();
+        return metadataWindow;
+    }
+
     private Button metadataButton(long imageId) {
         Button metadataButton = new Button("Show Metadata");
         metadataButton.setEnabled(false);
@@ -456,27 +481,8 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         }
         metadataButton.addClickListener(clickEvent -> {
             try {
-            Window metadataSubWindow = new Window("Metadata Sub-Window");
-            VerticalLayout metadataLayout = new VerticalLayout();
-
-            Grid<MetadataProperty> metadataGrid = new Grid<>();
-            metadataGrid.setDataProvider(new ListDataProvider<MetadataProperty>(metadataProperties));
-            metadataGrid.setSelectionMode(SelectionMode.NONE);
-
-            Column<MetadataProperty, String> nameColumn = metadataGrid.addColumn(
-                MetadataProperty::getName).setCaption("Name");
-            Column<MetadataProperty, String> valueColumn = metadataGrid.addColumn(metadataProperty -> {
-                return metadataProperty.getValue().toString();
-            }).setCaption("Value");
-            Column<MetadataProperty, String> descriptionColumn = metadataGrid.addColumn(
-                MetadataProperty::getDescription).setCaption("Description");
-            metadataLayout.addComponent(metadataGrid);
-
-            metadataSubWindow.setContent(metadataLayout);
-            metadataSubWindow.setModal(true);
-            metadataSubWindow.setResizable(false);
-            metadataSubWindow.center();
-            addWindow(metadataSubWindow);
+                Window metadataWindow = metadataWindow(metadataProperties);
+                addWindow(metadataWindow);
             }
             catch (Exception e)
             {
