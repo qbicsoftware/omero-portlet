@@ -3,13 +3,36 @@ package life.qbic.portal.portlet;
 import java.util.Objects;
 
 /**
- * This class describes a property of metadata for an image
- * @param <T> The type of the contained value
+ *  Describes the image metadata properties
  *
+ *  This class serves as DTO and contains information about
+ *  image metadata properties which were retrieved from the omero server
+ *
+ * @since 1.1.0
+ * @param <T> The type of the contained value
+
  */
 public class MetadataProperty<T> {
+
+  /**
+   * Name of the metadata property
+   *
+   * e.g polarizationOptics
+   */
   private final String name;
+
+  /**
+   * Value of the metadata property
+   *
+   * e.g Glen Thompson linear polarizer
+   */
   private final T value;
+
+  /**
+   * Description of the metadata property
+   *
+   * e.g Polarization optic hardware
+   */
   private final String description;
 
   public MetadataProperty(String name, T value, String description) {
