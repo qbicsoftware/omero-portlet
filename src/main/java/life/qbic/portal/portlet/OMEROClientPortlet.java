@@ -420,7 +420,7 @@ public class OMEROClientPortlet extends QBiCPortletUI {
     /**
      * Generates a vaadin Button which when pressed will retrieve the metadata information of the given imageId  from the omero server and present it in a seperate subwindow
      * @param imageId the id of the image for which the metadata should be retrieved
-     * @return a vaadin {@Button Button} component
+     * @return a vaadin Button component
      */
     private Button metadataButton(long imageId) {
         Button metadataButton = new Button("Show Metadata");
