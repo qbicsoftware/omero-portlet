@@ -257,55 +257,7 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         Column<ImageInfo, String> imageTpsColumn = imageInfoGrid.addColumn(ImageInfo::getTimePoints).setCaption("Image Time Points");
         Column<ImageInfo, String> imageChannelsColumn = imageInfoGrid.addColumn(ImageInfo::getChannels).setCaption("Channels");
         Column<ImageInfo, Component> imageFullColumn = imageInfoGrid.addColumn(imageInfo -> (Component) linkToFullImage(imageInfo.getImageId())).setCaption("Full Image");
-        Column<ImageInfo, Button> imageMetadataColumn = imageInfoGrid.addColumn(imageInfo -> {
-            Button metadataButton = new Button("Show Metadata");
-            metadataButton.addClickListener(clickEvent -> {
-                Window metadataSubWindow = new Window("Metadata Sub-Window");
-                VerticalLayout metadataLayout = new VerticalLayout();
-
-                //TODO get metadata and add components
-                Collection<MetadataProperty> metadataProperties = new ArrayList<>();
-                long currentImageId = imageInfo.getImageId();
-                try {
-                    List metadataList = omeroClient.fetchMapAnnotationDataForImage(currentImageId);
-                    for (int i = 0; i < metadataList.size(); i++) {
-                        MapAnnotationData currentMapAnnotation = (MapAnnotationData) metadataList.get(i);
-                        List<NamedValue> list = (List<NamedValue>) currentMapAnnotation
-                            .getContent();
-                        for (NamedValue namedValue : list) {
-                            String metaDataKey = namedValue.name;
-                            String metaDataValue = namedValue.value;
-                            metadataProperties.add(new MetadataProperty<String>("Key: " + metaDataKey, "Value " + metaDataValue, "example property no."));
-                    }
-                    }
-
-                } catch (Exception e) {
-                    LOG.error("Could not retrieve metadata for image:" + currentImageId);
-                    LOG.debug(e);
-                    metadataButton.setEnabled(false);
-                }
-
-                Grid<MetadataProperty> metadataGrid = new Grid<>();
-                metadataGrid.setDataProvider(new ListDataProvider<MetadataProperty>(metadataProperties));
-                metadataGrid.setSelectionMode(SelectionMode.NONE);
-
-                Column<MetadataProperty, String> nameColumn = metadataGrid.addColumn(
-                    MetadataProperty::getName).setCaption("Name");
-                Column<MetadataProperty, String> valueColumn = metadataGrid.addColumn(metadataProperty -> {
-                    return metadataProperty.getValue().toString();
-                }).setCaption("Value");
-                Column<MetadataProperty, String> descriptionColumn = metadataGrid.addColumn(
-                    MetadataProperty::getDescription).setCaption("Description");
-                metadataLayout.addComponent(metadataGrid);
-
-                metadataSubWindow.setContent(metadataLayout);
-                metadataSubWindow.setModal(true);
-                metadataSubWindow.setResizable(false);
-                metadataSubWindow.center();
-                addWindow(metadataSubWindow);
-            });
-            return metadataButton;
-        }).setCaption("Metadata");
+        Column<ImageInfo, Button> imageMetadataColumn = imageInfoGrid.addColumn(imageInfo -> metadataButton(imageInfo.getImageId())).setCaption("Metadata");
 
         /////////////
         imageThumbnailColumn.setRenderer(new ComponentRenderer());
@@ -452,6 +404,59 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         Link fullImageLink = new Link("Open Image", fullImage);
         fullImageLink.setTargetName("_blank");
         return fullImageLink;
+    }
+
+    /**
+     * Generates a vaadin Button which when pressed will retrieve the metadata information of the given imageId  from the omero server and present it in a seperate subwindow
+     * @param imageId the id of the image for which the metadata should be retrieved
+     * @return a vaadin {@Button Button} component
+     */
+    private Button metadataButton(long imageId) {
+        Button metadataButton = new Button("Show Metadata");
+        metadataButton.addClickListener(clickEvent -> {
+            Window metadataSubWindow = new Window("Metadata Sub-Window");
+            VerticalLayout metadataLayout = new VerticalLayout();
+
+            Collection<MetadataProperty> metadataProperties = new ArrayList<>();
+            try {
+                List metadataList = omeroClient.fetchMapAnnotationDataForImage(imageId);
+                for (int i = 0; i < metadataList.size(); i++) {
+                    MapAnnotationData currentMapAnnotation = (MapAnnotationData) metadataList.get(i);
+                    List<NamedValue> list = (List<NamedValue>) currentMapAnnotation
+                        .getContent();
+                    for (NamedValue namedValue : list) {
+                        String metaDataKey = namedValue.name;
+                        String metaDataValue = namedValue.value;
+                        metadataProperties.add(new MetadataProperty<String>("Key: " + metaDataKey, "Value " + metaDataValue, "example property no."));
+                    }
+                }
+
+            } catch (Exception e) {
+                LOG.error("Could not retrieve metadata for image:" + imageId);
+                LOG.debug(e);
+                metadataButton.setEnabled(false);
+            }
+
+            Grid<MetadataProperty> metadataGrid = new Grid<>();
+            metadataGrid.setDataProvider(new ListDataProvider<MetadataProperty>(metadataProperties));
+            metadataGrid.setSelectionMode(SelectionMode.NONE);
+
+            Column<MetadataProperty, String> nameColumn = metadataGrid.addColumn(
+                MetadataProperty::getName).setCaption("Name");
+            Column<MetadataProperty, String> valueColumn = metadataGrid.addColumn(metadataProperty -> {
+                return metadataProperty.getValue().toString();
+            }).setCaption("Value");
+            Column<MetadataProperty, String> descriptionColumn = metadataGrid.addColumn(
+                MetadataProperty::getDescription).setCaption("Description");
+            metadataLayout.addComponent(metadataGrid);
+
+            metadataSubWindow.setContent(metadataLayout);
+            metadataSubWindow.setModal(true);
+            metadataSubWindow.setResizable(false);
+            metadataSubWindow.center();
+            addWindow(metadataSubWindow);
+        });
+        return metadataButton;
     }
 
     private void refreshGrid(Grid<?> grid) {
