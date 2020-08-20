@@ -29,7 +29,10 @@ import com.vaadin.ui.renderers.ComponentRenderer;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -152,9 +155,18 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         }
 
         ///////////////////////
+        Layout result;
 
+        try {
+            result = displayData();
+        } catch (Exception e) {
+            LOG.error(e.getMessage());
+            LOG.debug(e);
+            Notification.show(e.getMessage());
+            result = new VerticalLayout();
+        }
 
-        return displayData();
+        return result;
     }
 
     private Layout displayData() {
@@ -251,10 +263,28 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         Column<ImageInfo, String> imageSizeColumn = imageInfoGrid.addColumn(ImageInfo::getSize).setCaption("Size (X,Y,Z)");
         Column<ImageInfo, String> imageTpsColumn = imageInfoGrid.addColumn(ImageInfo::getTimePoints).setCaption("Image Time Points");
         Column<ImageInfo, String> imageChannelsColumn = imageInfoGrid.addColumn(ImageInfo::getChannels).setCaption("Channels");
-        Column<ImageInfo, Component> imageFullColumn = imageInfoGrid.addColumn(imageInfo -> (Component) linkToFullImage(imageInfo.getImageId())).setCaption("Full Image");
+        Column<ImageInfo, Component> imageFullColumn = imageInfoGrid.addColumn(imageInfo -> {
+            // Exceptions need to be handled here since they are event based and do not bubble up
+            try{
+                return (Component) linkToFullImage(imageInfo.getImageId());
+            } catch (Exception e) {
+                LOG.error("Could not generate full image link for imageId: " + imageInfo.getImageId());
+                LOG.debug(e);
+                Label noFullImageLabel = new Label("Not available.");
+                return (Component) noFullImageLabel;
+            }
+        }).setCaption("Full Image");
         Column<ImageInfo, Component> downloadImageColumn = imageInfoGrid.addColumn(imageInfo -> {
-            Link downloadImageLink = linkToImageDownload(imageInfo.getImageId());
-            return (Component) downloadImageLink;
+            // Exceptions need to be handled here since they are event based and do not bubble up
+            try {
+                Link downloadImageLink = linkToImageDownload(imageInfo.getImageId());
+                return (Component) downloadImageLink;
+            } catch (Exception e) {
+                LOG.error("Could not generate link for imageId: "+ imageInfo.getImageId());
+                LOG.debug(e);
+                Label noDownloadLabel = new Label("No download available.");
+                return (Component) noDownloadLabel;
+            }
         }).setCaption("Download Image");
 
         imageThumbnailColumn.setRenderer(new ComponentRenderer());
@@ -338,9 +368,9 @@ public class OMEROClientPortlet extends QBiCPortletUI {
                         // ignore integer and store in byte array
                         thumbnailInputStream.read(thumbnail);
                         thumbnailInputStream.close();
-                    } catch (Exception e) {
+                    } catch (IOException ioException) {
                         LOG.error("Could not retrieve thumbnail for image:" + imageId);
-                        LOG.debug(e);
+                        LOG.debug(ioException);
                     }
                     ImageInfo imageInfo = new ImageInfo(imageId, imageName, thumbnail, imageSize, imageTimePoints, imageChannels);
                     imageInfos.add(imageInfo);
@@ -389,10 +419,8 @@ public class OMEROClientPortlet extends QBiCPortletUI {
      * @return a vaadin {@link Link} component
      */
     private Link linkToFullImage(long imageId) {
-        String omeroUrl = cm.getOmeroHostname();
-        String requestUrl = "/omero/webclient/img_detail/" + imageId + "?server=1&bsession=" + this.omeroSessionKey;
-        String url = "http://" + omeroUrl + requestUrl;
-        Resource fullImage = new ExternalResource(url);
+        String requestUrl = omeroClient.composeImageDetailAddress(imageId);
+        Resource fullImage = new ExternalResource(requestUrl);
         Link fullImageLink = new Link("Open Image", fullImage);
         fullImageLink.setTargetName("_blank");
         return fullImageLink;
@@ -404,8 +432,9 @@ public class OMEROClientPortlet extends QBiCPortletUI {
      * @return a vaadin {@link Link} component linking to the download
      */
     private Link linkToImageDownload(long imageId) {
-        //TODO implement and replace `about:blank` with actual url
-        Resource downloadImageResource = new ExternalResource("about:blank");
+        LOG.info("sessionKey:"+ omeroSessionKey);
+        String donwloadLinkAddress = omeroClient.getImageDownloadLink(imageId);
+        Resource downloadImageResource = new ExternalResource(donwloadLinkAddress);
         Link downloadImageLink = new Link("Download Image", downloadImageResource);
         downloadImageLink.setTargetName("_blank");
         return downloadImageLink;
@@ -438,51 +467,75 @@ public class OMEROClientPortlet extends QBiCPortletUI {
     //////////////////////////////////
     //omero json client
 
-    private JsonStructure get(String urlString, Map<String, String> params)
-            throws Exception {
+    private JsonStructure get(String urlString, Map<String, String> params) {
         HttpGet httpGet = null;
         if (params == null || params.isEmpty()) {
             httpGet = new HttpGet(urlString);
         } else {
-            URIBuilder builder = new URIBuilder(urlString);
-            for (Entry<String, String> e : params.entrySet()) {
-                builder.addParameter(e.getKey(), e.getValue());
+            try {
+                URIBuilder builder = new URIBuilder(urlString);
+                for (Entry<String, String> e : params.entrySet()) {
+                    builder.addParameter(e.getKey(), e.getValue());
+                }
+                httpGet = new HttpGet(builder.build());
+            } catch (URISyntaxException e) {
+                throw new IllegalArgumentException("String could not be parsed as URI reference.", e);
             }
-            httpGet = new HttpGet(builder.build());
         }
-
-        HttpResponse res = httpClient.execute(httpGet);
-        try (JsonReader reader = Json.createReader(new BufferedReader(
-                new InputStreamReader(res.getEntity().getContent())))) {
-            return reader.read();
+        try {
+            HttpResponse res = httpClient.execute(httpGet);
+            try (JsonReader reader = Json.createReader(new BufferedReader(
+                    new InputStreamReader(res.getEntity().getContent())))) {
+                return reader.read();
+            }
+        } catch (ClientProtocolException e) {
+            throw new RuntimeException("Error in HTTP protocol.", e);
+        } catch (IOException e) {
+           throw new RuntimeException("Unexpected failure in I/O operation.", e);
         }
     }
 
-    private JsonStructure post(String url, Map<String, String> params)
-            throws HttpException, ClientProtocolException, IOException {
+    private JsonStructure post(String url, Map<String, String> params) {
 
         HttpPost httpPost = new HttpPost(url);
-        if (params != null && !params.isEmpty()) {
-            List<NameValuePair> nvps = new ArrayList<NameValuePair>();
-            for (Entry<String, String> entry : params.entrySet()) {
-                nvps.add(new BasicNameValuePair(entry.getKey(), entry
-                        .getValue()));
+        try {
+            if (params != null && !params.isEmpty()) {
+                List<NameValuePair> nvps = new ArrayList<NameValuePair>();
+                for (Entry<String, String> entry : params.entrySet()) {
+                    nvps.add(new BasicNameValuePair(entry.getKey(), entry
+                            .getValue()));
+                }
+                httpPost.setEntity(new UrlEncodedFormEntity(nvps));
+
             }
-            httpPost.setEntity(new UrlEncodedFormEntity(nvps));
+        } catch (UnsupportedEncodingException e) {
+            throw new IllegalArgumentException("Parameters could not be parsed", e);
         }
-        httpPost.addHeader("X-CSRFToken", this.token);
-        HttpResponse res = httpClient.execute(httpPost);
-        if (res.getStatusLine().getStatusCode() != 200) {
-            throw new HttpException("POST failed. URL: " + url + " Status:" + res.getStatusLine());
+
+        InputStream responseContent = null;
+        try {
+            httpPost.addHeader("X-CSRFToken", this.token);
+            HttpResponse httpResponse = httpClient.execute(httpPost);
+
+            if (httpResponse.getStatusLine().getStatusCode() != 200) {
+                throw new HttpException("POST failed. URL: " + url + " Status:" + httpResponse.getStatusLine());
+            }
+            responseContent = httpResponse.getEntity().getContent();
+        } catch (HttpException httpException) {
+            throw new RuntimeException(httpException.getMessage(), httpException);
+        } catch (ClientProtocolException protocolException) {
+            throw new IllegalArgumentException("Error in HTTP protocol.", protocolException);
+        } catch (IOException ioException) {
+            throw new IllegalArgumentException("Fetching response content failed.", ioException);
         }
 
         try (JsonReader reader = Json.createReader(new BufferedReader(
-                new InputStreamReader(res.getEntity().getContent())))) {
+                new InputStreamReader(responseContent)))) {
             return reader.read();
         }
     }
 
-    public Map<String, String> omeroJsonGetURLs() throws Exception {
+    public Map<String, String> omeroJsonGetURLs() {
         JsonObject json = (JsonObject) get(requestURL, null);
 
         Map<String, String> urls = new HashMap<>();
@@ -495,14 +548,14 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         return urls;
     }
 
-    private String getCSRFToken() throws Exception {
+    private String getCSRFToken() {
         String url = serviceURLs.get("url:token");
         JsonObject json = (JsonObject) get(url, null);
         return json.getJsonString("data").getString();
     }
 
-    public JsonObject omeroJsonLogin(String username, String password, int serverId)
-            throws Exception {
+    public JsonObject omeroJsonLogin(String username, String password, int serverId) {
+
         // make sure we have all the necessary URLs
         //omeroJsonGetVersion();
         //this.requestURL = "http://134.2.183.129/omero/api/v0/";
@@ -519,13 +572,7 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         params.put("username", username);
         params.put("password", password);
 
-        try {
-            JsonObject response = (JsonObject) post(url, params);
-            return response.getJsonObject("eventContext");
-        } catch (Exception e) {
-            LOG.error("JSON login to omero failed.");
-            LOG.debug(e);
-        }
-        return null;
+        JsonObject response = (JsonObject) post(url, params);
+        return response.getJsonObject("eventContext");
     }
 }
