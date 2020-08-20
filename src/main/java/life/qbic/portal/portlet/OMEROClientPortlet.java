@@ -415,29 +415,30 @@ public class OMEROClientPortlet extends QBiCPortletUI {
      */
     private Button metadataButton(long imageId) {
         Button metadataButton = new Button("Show Metadata");
+        metadataButton.setEnabled(false);
+        Collection<MetadataProperty> metadataProperties = new ArrayList<>();
+        try {
+            List metadataList = omeroClient.fetchMapAnnotationDataForImage(imageId);
+            for (int i = 0; i < metadataList.size(); i++) {
+                MapAnnotationData currentMapAnnotation = (MapAnnotationData) metadataList.get(i);
+                List<NamedValue> list = (List<NamedValue>) currentMapAnnotation
+                    .getContent();
+                for (NamedValue namedValue : list) {
+                    String metaDataKey = namedValue.name;
+                    String metaDataValue = namedValue.value;
+                    metadataProperties.add(new MetadataProperty<String>("Key: " + metaDataKey, "Value " + metaDataValue, "example property no."));
+                    metadataButton.setEnabled(true);
+                }
+            }
+
+        } catch (Exception e) {
+            LOG.error("Could not retrieve metadata for image:" + imageId);
+            LOG.debug(e);
+
+        }
         metadataButton.addClickListener(clickEvent -> {
             Window metadataSubWindow = new Window("Metadata Sub-Window");
             VerticalLayout metadataLayout = new VerticalLayout();
-
-            Collection<MetadataProperty> metadataProperties = new ArrayList<>();
-            try {
-                List metadataList = omeroClient.fetchMapAnnotationDataForImage(imageId);
-                for (int i = 0; i < metadataList.size(); i++) {
-                    MapAnnotationData currentMapAnnotation = (MapAnnotationData) metadataList.get(i);
-                    List<NamedValue> list = (List<NamedValue>) currentMapAnnotation
-                        .getContent();
-                    for (NamedValue namedValue : list) {
-                        String metaDataKey = namedValue.name;
-                        String metaDataValue = namedValue.value;
-                        metadataProperties.add(new MetadataProperty<String>("Key: " + metaDataKey, "Value " + metaDataValue, "example property no."));
-                    }
-                }
-
-            } catch (Exception e) {
-                LOG.error("Could not retrieve metadata for image:" + imageId);
-                LOG.debug(e);
-                metadataButton.setEnabled(false);
-            }
 
             Grid<MetadataProperty> metadataGrid = new Grid<>();
             metadataGrid.setDataProvider(new ListDataProvider<MetadataProperty>(metadataProperties));
