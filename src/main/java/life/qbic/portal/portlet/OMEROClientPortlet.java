@@ -460,9 +460,15 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         return metadataWindow;
     }
 
-    private Button metadataButton(long imageId) {
-        Button metadataButton = new Button("Show Metadata");
-        metadataButton.setEnabled(false);
+    /**
+     * Collects and converts the metadata stored on the omero server for a given imageId into a MetadataProperty Object
+     *
+     * @param imageId the image for which the metadata should be collected
+     * @return Collection of MetadataProperty Objects
+     */
+
+    private Collection<MetadataProperty> collectMetadata(long imageId) {
+
         Collection<MetadataProperty> metadataProperties = new ArrayList<>();
         try {
             List metadataList = omeroClient.fetchMapAnnotationDataForImage(imageId);
@@ -474,16 +480,38 @@ public class OMEROClientPortlet extends QBiCPortletUI {
                     String metaDataKey = namedValue.name;
                     String metaDataValue = namedValue.value;
                     metadataProperties.add(new MetadataProperty<String>("Key: " + metaDataKey, "Value " + metaDataValue, "example property no."));
-                    metadataButton.setEnabled(true);
                 }
             }
 
         } catch (Exception e) {
             LOG.error("Could not retrieve metadata for image:" + imageId);
             LOG.debug(e);
-            return metadataButton;
 
         }
+        return metadataProperties;
+    }
+
+
+    /**
+     * Generates a vaadin Button which opens a Window displaying the metadata information for a given imageId
+     *
+     * @param imageId the image for which the Button should be generated
+     * @return a vaadin Button
+     */
+
+    private Button metadataButton(long imageId) {
+        Button metadataButton = new Button("Show Metadata");
+        metadataButton.setEnabled(false);
+        Collection<MetadataProperty> metadataProperties;
+
+            metadataProperties = collectMetadata(imageId);
+            if (!metadataProperties.isEmpty()) {
+            metadataButton.setEnabled(true);
+            }
+            else {
+                return metadataButton;
+            }
+
         metadataButton.addClickListener(clickEvent -> {
             try {
                 Window metadataWindow = metadataWindow(metadataProperties);
