@@ -26,43 +26,17 @@ import com.vaadin.ui.TextField;
 import com.vaadin.ui.VerticalLayout;
 import com.vaadin.ui.components.grid.HeaderRow;
 import com.vaadin.ui.renderers.ComponentRenderer;
-import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.UnsupportedEncodingException;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
-import javax.json.Json;
-import javax.json.JsonObject;
-import javax.json.JsonReader;
-import javax.json.JsonString;
-import javax.json.JsonStructure;
-import javax.json.JsonValue;
 import life.qbic.omero.BasicOMEROClient;
 import life.qbic.portal.utils.ConfigurationManager;
 import life.qbic.portal.utils.ConfigurationManagerFactory;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang.StringUtils;
-import org.apache.http.HttpException;
-import org.apache.http.HttpResponse;
-import org.apache.http.NameValuePair;
-import org.apache.http.client.ClientProtocolException;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.protocol.HttpClientContext;
-import org.apache.http.client.utils.URIBuilder;
-import org.apache.http.impl.client.BasicCookieStore;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.message.BasicNameValuePair;
-import org.apache.http.protocol.BasicHttpContext;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -81,21 +55,9 @@ public class OMEROClientPortlet extends QBiCPortletUI {
     ///////////////////////////////
     private final ConfigurationManager cm = ConfigurationManagerFactory.getInstance();
 
-
-    //////////////////////////////
-    //omero json client
-
-    private HttpClient httpClient;
-    private String requestURL;
-    private Map<String, String> serviceURLs;
-    private String token;
-
-    private String omeroSessionKey;
     private BasicOMEROClient omeroClient;
     private final List<Project> projects;
-    /**
-     * Contains samples to be displayed
-     */
+
     private final List<Sample> samples;
     private final List<ImageInfo> imageInfos;
     private ComboBox<Project> projectBox;
@@ -110,41 +72,11 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         imageInfos = new ArrayList<>();
     }
 
-    /////////////////////////////
-
-
     /**
      * {@inheritDoc}
      */
     @Override
     protected Layout getPortletContent(final VaadinRequest request) {
-
-        //////////////////////////////
-        //omero json client
-
-        //FIXME remove hard coded url
-        this.requestURL = "http://134.2.183.129/omero/api/v0/";
-
-
-        this.httpClient = HttpClients.createDefault();
-        BasicHttpContext httpContext = new BasicHttpContext();
-        BasicCookieStore cookieStore = new BasicCookieStore();
-        cookieStore.clear();
-        httpContext.setAttribute(HttpClientContext.COOKIE_STORE, cookieStore);
-
-        try{
-
-            JsonObject ctx = omeroJsonLogin(cm.getOmeroUser(), cm.getOmeroPassword(), 1);
-
-
-            this.omeroSessionKey = ctx.getString("sessionUuid");
-
-            LOG.info(ctx.toString());
-        } catch (Exception e) {
-            LOG.error("Omero json login failed.");
-            LOG.debug(e);
-            return new VerticalLayout();
-        }
 
         try {
             omeroClient = new BasicOMEROClient(cm.getOmeroUser(), cm.getOmeroPassword(), cm.getOmeroHostname(), Integer.parseInt(cm.getOmeroPort()));
@@ -154,9 +86,7 @@ public class OMEROClientPortlet extends QBiCPortletUI {
             return new VerticalLayout();
         }
 
-        ///////////////////////
         Layout result;
-
         try {
             result = displayData();
         } catch (Exception e) {
@@ -399,9 +329,7 @@ public class OMEROClientPortlet extends QBiCPortletUI {
      */
     private void loadProjects() {
         projects.clear();
-        omeroClient.connect();
         HashMap<Long, String> projectMap = omeroClient.loadProjects();
-        omeroClient.disconnect();
 
         for (Entry<Long, String> entry : projectMap.entrySet()) {
             Long projectId = entry.getKey();
@@ -432,9 +360,8 @@ public class OMEROClientPortlet extends QBiCPortletUI {
      * @return a vaadin {@link Link} component linking to the download
      */
     private Link linkToImageDownload(long imageId) {
-        LOG.info("sessionKey:"+ omeroSessionKey);
-        String donwloadLinkAddress = omeroClient.getImageDownloadLink(imageId);
-        Resource downloadImageResource = new ExternalResource(donwloadLinkAddress);
+        String downloadLinkAddress = omeroClient.getImageDownloadLink(imageId);
+        Resource downloadImageResource = new ExternalResource(downloadLinkAddress);
         Link downloadImageLink = new Link("Download Image", downloadImageResource);
         downloadImageLink.setTargetName("_blank");
         return downloadImageLink;
@@ -442,6 +369,7 @@ public class OMEROClientPortlet extends QBiCPortletUI {
 
     private void refreshGrid(Grid<?> grid) {
         grid.getDataProvider().refreshAll();
+        grid.setSizeFull();
     }
 
     /**
@@ -462,117 +390,5 @@ public class OMEROClientPortlet extends QBiCPortletUI {
 
         headerRow.getCell(column).setComponent(filterTextField);
         filterTextField.setSizeFull();
-    }
-
-    //////////////////////////////////
-    //omero json client
-
-    private JsonStructure get(String urlString, Map<String, String> params) {
-        HttpGet httpGet = null;
-        if (params == null || params.isEmpty()) {
-            httpGet = new HttpGet(urlString);
-        } else {
-            try {
-                URIBuilder builder = new URIBuilder(urlString);
-                for (Entry<String, String> e : params.entrySet()) {
-                    builder.addParameter(e.getKey(), e.getValue());
-                }
-                httpGet = new HttpGet(builder.build());
-            } catch (URISyntaxException e) {
-                throw new IllegalArgumentException("String could not be parsed as URI reference.", e);
-            }
-        }
-        try {
-            HttpResponse res = httpClient.execute(httpGet);
-            try (JsonReader reader = Json.createReader(new BufferedReader(
-                    new InputStreamReader(res.getEntity().getContent())))) {
-                return reader.read();
-            }
-        } catch (ClientProtocolException e) {
-            throw new RuntimeException("Error in HTTP protocol.", e);
-        } catch (IOException e) {
-           throw new RuntimeException("Unexpected failure in I/O operation.", e);
-        }
-    }
-
-    private JsonStructure post(String url, Map<String, String> params) {
-
-        HttpPost httpPost = new HttpPost(url);
-        try {
-            if (params != null && !params.isEmpty()) {
-                List<NameValuePair> nvps = new ArrayList<NameValuePair>();
-                for (Entry<String, String> entry : params.entrySet()) {
-                    nvps.add(new BasicNameValuePair(entry.getKey(), entry
-                            .getValue()));
-                }
-                httpPost.setEntity(new UrlEncodedFormEntity(nvps));
-
-            }
-        } catch (UnsupportedEncodingException e) {
-            throw new IllegalArgumentException("Parameters could not be parsed", e);
-        }
-
-        InputStream responseContent = null;
-        try {
-            httpPost.addHeader("X-CSRFToken", this.token);
-            HttpResponse httpResponse = httpClient.execute(httpPost);
-
-            if (httpResponse.getStatusLine().getStatusCode() != 200) {
-                throw new HttpException("POST failed. URL: " + url + " Status:" + httpResponse.getStatusLine());
-            }
-            responseContent = httpResponse.getEntity().getContent();
-        } catch (HttpException httpException) {
-            throw new RuntimeException(httpException.getMessage(), httpException);
-        } catch (ClientProtocolException protocolException) {
-            throw new IllegalArgumentException("Error in HTTP protocol.", protocolException);
-        } catch (IOException ioException) {
-            throw new IllegalArgumentException("Fetching response content failed.", ioException);
-        }
-
-        try (JsonReader reader = Json.createReader(new BufferedReader(
-                new InputStreamReader(responseContent)))) {
-            return reader.read();
-        }
-    }
-
-    public Map<String, String> omeroJsonGetURLs() {
-        JsonObject json = (JsonObject) get(requestURL, null);
-
-        Map<String, String> urls = new HashMap<>();
-
-        for (Entry<String, JsonValue> entry : json.entrySet()) {
-            urls.put(entry.getKey(),
-                    ((JsonString) entry.getValue()).getString());
-        }
-
-        return urls;
-    }
-
-    private String getCSRFToken() {
-        String url = serviceURLs.get("url:token");
-        JsonObject json = (JsonObject) get(url, null);
-        return json.getJsonString("data").getString();
-    }
-
-    public JsonObject omeroJsonLogin(String username, String password, int serverId) {
-
-        // make sure we have all the necessary URLs
-        //omeroJsonGetVersion();
-        //this.requestURL = "http://134.2.183.129/omero/api/v0/";
-        this.serviceURLs = omeroJsonGetURLs();
-
-        // make sure we have a CSRF token
-        if (this.token == null) {
-            this.token = getCSRFToken();
-        }
-
-        String url = serviceURLs.get("url:login");
-        Map<String, String> params = new HashMap<String, String>();
-        params.put("server", "" + serverId);
-        params.put("username", username);
-        params.put("password", password);
-
-        JsonObject response = (JsonObject) post(url, params);
-        return response.getJsonObject("eventContext");
     }
 }
