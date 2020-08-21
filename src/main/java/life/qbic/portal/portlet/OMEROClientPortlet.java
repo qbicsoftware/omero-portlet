@@ -24,26 +24,33 @@ import com.vaadin.ui.Notification;
 import com.vaadin.ui.Panel;
 import com.vaadin.ui.TextField;
 import com.vaadin.ui.VerticalLayout;
+import com.vaadin.ui.Window;
 import com.vaadin.ui.components.grid.HeaderRow;
 import com.vaadin.ui.renderers.ComponentRenderer;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map.Entry;
 import life.qbic.omero.BasicOMEROClient;
 import life.qbic.portal.utils.ConfigurationManager;
 import life.qbic.portal.utils.ConfigurationManagerFactory;
+import omero.gateway.model.MapAnnotationData;
+import omero.model.NamedValue;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 /**
- * Entry point for portlet omero-client-portlet. This class derives from {@link QBiCPortletUI}, which is found in the {@code portal-utils-lib} library.
+ * Entry point for the portlet omero-client-portlet.
  *
+ * This class derives from {@link QBiCPortletUI}, which can be found in the
+ * @code portal-utils-lib library.
  * @see <a href=https://github.com/qbicsoftware/portal-utils-lib>portal-utils-lib</a>
+ * @since 1.0.0
  */
 @Theme("mytheme")
 @SuppressWarnings("serial")
@@ -216,10 +223,21 @@ public class OMEROClientPortlet extends QBiCPortletUI {
                 return (Component) noDownloadLabel;
             }
         }).setCaption("Download Image");
+        Column<ImageInfo, Component> imageMetadataColumn = imageInfoGrid.addColumn(imageInfo -> {
+            // Exceptions need to be handled here since they are event based and do not bubble up
+            try {
+                return (Component) metadataButton(imageInfo.getImageId());
+            }catch (Exception e) {
+                LOG.error("Could not create metadata component for imageId: " + imageInfo.getImageId());
+                LOG.debug(e);
+                Label noMetadataLabel = new Label("");
+                return (Component) noMetadataLabel;
+            }}).setCaption("Metadata");
 
         imageThumbnailColumn.setRenderer(new ComponentRenderer());
         imageFullColumn.setRenderer(new ComponentRenderer());
         downloadImageColumn.setRenderer(new ComponentRenderer());
+        imageMetadataColumn.setRenderer(new ComponentRenderer());
 
 
         ListDataProvider<ImageInfo> imageListProvider = new ListDataProvider<>(imageInfos);
@@ -365,6 +383,105 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         Link downloadImageLink = new Link("Download Image", downloadImageResource);
         downloadImageLink.setTargetName("_blank");
         return downloadImageLink;
+    }
+    /**
+     * Generates a vaadin Window which displays the metadata information for the given
+     * metadataProperties
+     *
+     * @param metadataProperties the metadataProperties containing the metadata of an image stored on
+     *     the omero server
+     * @return a vaadin Window
+     */
+
+    private Window metadataWindow(Collection<MetadataProperty> metadataProperties)
+    {
+        Window metadataWindow = new Window("Metadata Sub-Window");
+        VerticalLayout metadataLayout = new VerticalLayout();
+
+        Grid<MetadataProperty> metadataGrid = new Grid<>();
+        metadataGrid.setDataProvider(new ListDataProvider<MetadataProperty>(metadataProperties));
+        metadataGrid.setSelectionMode(SelectionMode.NONE);
+
+        Column<MetadataProperty, String> nameColumn = metadataGrid.addColumn(
+            MetadataProperty::getName).setCaption("Name");
+        Column<MetadataProperty, String> valueColumn = metadataGrid.addColumn(metadataProperty -> {
+            return metadataProperty.getValue().toString();
+        }).setCaption("Value");
+        Column<MetadataProperty, String> descriptionColumn = metadataGrid.addColumn(
+            MetadataProperty::getDescription).setCaption("Description");
+        metadataLayout.addComponent(metadataGrid);
+
+        metadataWindow.setContent(metadataLayout);
+        metadataWindow.setModal(true);
+        metadataWindow.setResizable(false);
+        metadataWindow.center();
+        return metadataWindow;
+    }
+
+    /**
+     * Collects and converts the metadata stored on the omero server for a given imageId into a MetadataProperty Object
+     *
+     * @param imageId the image for which the metadata should be collected
+     * @return Collection of MetadataProperty Objects
+     */
+
+    private Collection<MetadataProperty> collectMetadata(long imageId) {
+
+        Collection<MetadataProperty> metadataProperties = new ArrayList<>();
+        try {
+            List metadataList = omeroClient.fetchMapAnnotationDataForImage(imageId);
+            for (int i = 0; i < metadataList.size(); i++) {
+                MapAnnotationData currentMapAnnotation = (MapAnnotationData) metadataList.get(i);
+                List<NamedValue> list = (List<NamedValue>) currentMapAnnotation
+                    .getContent();
+                for (NamedValue namedValue : list) {
+                    String metaDataKey = namedValue.name;
+                    String metaDataValue = namedValue.value;
+                    metadataProperties.add(new MetadataProperty<String>("Key: " + metaDataKey, "Value " + metaDataValue, "example property no."));
+                }
+            }
+
+        } catch (Exception e) {
+            LOG.error("Could not retrieve metadata for image:" + imageId);
+            LOG.debug(e);
+
+        }
+        return metadataProperties;
+    }
+
+
+    /**
+     * Generates a vaadin Button which opens a Window displaying the metadata information for a given imageId
+     *
+     * @param imageId the image for which the Button should be generated
+     * @return a vaadin Button
+     */
+
+    private Button metadataButton(long imageId) {
+        Button metadataButton = new Button("Show Metadata");
+        metadataButton.setEnabled(false);
+        Collection<MetadataProperty> metadataProperties;
+
+        metadataProperties = collectMetadata(imageId);
+        if (!metadataProperties.isEmpty()) {
+            metadataButton.setEnabled(true);
+        }
+        else {
+            return metadataButton;
+        }
+
+        metadataButton.addClickListener(clickEvent -> {
+            try {
+                Window metadataWindow = metadataWindow(metadataProperties);
+                addWindow(metadataWindow);
+            }
+            catch (Exception e)
+            {
+                LOG.error("Could not generate metadata subwindow for imageId: " + imageId);
+                LOG.debug(e);
+            }
+        });
+        return metadataButton;
     }
 
     private void refreshGrid(Grid<?> grid) {
