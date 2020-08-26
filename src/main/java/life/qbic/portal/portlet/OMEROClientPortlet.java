@@ -3,9 +3,7 @@ package life.qbic.portal.portlet;
 import com.vaadin.annotations.Theme;
 import com.vaadin.annotations.Widgetset;
 import com.vaadin.data.provider.ListDataProvider;
-import com.vaadin.server.ExternalResource;
-import com.vaadin.server.Resource;
-import com.vaadin.server.VaadinRequest;
+import com.vaadin.server.*;
 import com.vaadin.shared.ui.ContentMode;
 import com.vaadin.shared.ui.ValueChangeMode;
 import com.vaadin.ui.Button;
@@ -27,8 +25,9 @@ import com.vaadin.ui.VerticalLayout;
 import com.vaadin.ui.Window;
 import com.vaadin.ui.components.grid.HeaderRow;
 import com.vaadin.ui.renderers.ComponentRenderer;
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
+
+import java.io.*;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -37,7 +36,13 @@ import java.util.Map.Entry;
 import life.qbic.omero.BasicOMEROClient;
 import life.qbic.portal.utils.ConfigurationManager;
 import life.qbic.portal.utils.ConfigurationManagerFactory;
+import loci.poi.util.SystemOutLogger;
+import loci.poi.util.TempFile;
+import omero.gateway.model.FileAnnotationData;
 import omero.gateway.model.MapAnnotationData;
+import omero.model.AnnotationAnnotationLink;
+import omero.model.Format;
+import omero.model.ImageI;
 import omero.model.NamedValue;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang.StringUtils;
@@ -214,8 +219,8 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         Column<ImageInfo, Component> downloadImageColumn = imageInfoGrid.addColumn(imageInfo -> {
             // Exceptions need to be handled here since they are event based and do not bubble up
             try {
-                Link downloadImageLink = linkToImageDownload(imageInfo.getImageId());
-                return (Component) downloadImageLink;
+                Button downloadImageButton = downloadImage(imageInfo.getImageId());
+                return (Component) downloadImageButton;
             } catch (Exception e) {
                 LOG.error("Could not generate link for imageId: "+ imageInfo.getImageId());
                 LOG.debug(e);
@@ -373,17 +378,34 @@ public class OMEROClientPortlet extends QBiCPortletUI {
     }
 
     /**
+     * ydgdfg
      *
      * @param imageId the image for which a download link should be generated
-     * @return a vaadin {@link Link} component linking to the download
+     * @return a vaadin {@link Button} component linking to the download
      */
-    private Link linkToImageDownload(long imageId) {
-        String downloadLinkAddress = omeroClient.getImageDownloadLink(imageId);
-        Resource downloadImageResource = new ExternalResource(downloadLinkAddress);
-        Link downloadImageLink = new Link("Download Image", downloadImageResource);
-        downloadImageLink.setTargetName("_blank");
-        return downloadImageLink;
+    private Button downloadImage(long imageId) {
+        Button downloadButton = new Button("Download Image");
+        downloadButton.setEnabled(false);
+
+        try{
+            downloadButton.addClickListener(clickEvent -> {
+                try {
+                    String imagePath = omeroClient.downloadOmeTiff(imageId);
+                    getUI().getPage().open(imagePath,"_blank");
+                }
+                catch (Exception e)
+                {
+                    LOG.error("Could not generate path to ome.tiff file for image: " + imageId);
+                    LOG.debug(e);
+                }
+            });
+            downloadButton.setEnabled(true);
+        }catch(Exception e){
+            throw new RuntimeException("",e);
+        }
+        return downloadButton;
     }
+
     /**
      * Generates a vaadin Window which displays the metadata information for the given
      * metadataProperties
