@@ -378,7 +378,7 @@ public class OMEROClientPortlet extends QBiCPortletUI {
     }
 
     /**
-     * ydgdfg
+     * Allows the user to download an image in ome.tiff format for a given image id
      *
      * @param imageId the image for which a download link should be generated
      * @return a vaadin {@link Button} component linking to the download
