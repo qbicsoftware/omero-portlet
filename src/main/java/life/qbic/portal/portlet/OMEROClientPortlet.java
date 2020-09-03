@@ -3,9 +3,7 @@ package life.qbic.portal.portlet;
 import com.vaadin.annotations.Theme;
 import com.vaadin.annotations.Widgetset;
 import com.vaadin.data.provider.ListDataProvider;
-import com.vaadin.server.ExternalResource;
-import com.vaadin.server.Resource;
-import com.vaadin.server.VaadinRequest;
+import com.vaadin.server.*;
 import com.vaadin.shared.ui.ContentMode;
 import com.vaadin.shared.ui.ValueChangeMode;
 import com.vaadin.ui.Button;
@@ -27,43 +25,27 @@ import com.vaadin.ui.VerticalLayout;
 import com.vaadin.ui.Window;
 import com.vaadin.ui.components.grid.HeaderRow;
 import com.vaadin.ui.renderers.ComponentRenderer;
-import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
+
+import java.io.*;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
-import javax.json.Json;
-import javax.json.JsonObject;
-import javax.json.JsonReader;
-import javax.json.JsonString;
-import javax.json.JsonStructure;
-import javax.json.JsonValue;
 import life.qbic.omero.BasicOMEROClient;
 import life.qbic.portal.utils.ConfigurationManager;
 import life.qbic.portal.utils.ConfigurationManagerFactory;
-import omero.model.NamedValue;
+import loci.poi.util.SystemOutLogger;
+import loci.poi.util.TempFile;
+import omero.gateway.model.FileAnnotationData;
 import omero.gateway.model.MapAnnotationData;
+import omero.model.AnnotationAnnotationLink;
+import omero.model.Format;
+import omero.model.ImageI;
+import omero.model.NamedValue;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang.StringUtils;
-import org.apache.http.HttpException;
-import org.apache.http.HttpResponse;
-import org.apache.http.NameValuePair;
-import org.apache.http.client.ClientProtocolException;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.protocol.HttpClientContext;
-import org.apache.http.client.utils.URIBuilder;
-import org.apache.http.impl.client.BasicCookieStore;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.message.BasicNameValuePair;
-import org.apache.http.protocol.BasicHttpContext;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -85,21 +67,9 @@ public class OMEROClientPortlet extends QBiCPortletUI {
     ///////////////////////////////
     private final ConfigurationManager cm = ConfigurationManagerFactory.getInstance();
 
-
-    //////////////////////////////
-    //omero json client
-
-    private HttpClient httpClient;
-    private String requestURL;
-    private Map<String, String> serviceURLs;
-    private String token;
-
-    private String omeroSessionKey;
     private BasicOMEROClient omeroClient;
     private final List<Project> projects;
-    /**
-     * Contains samples to be displayed
-     */
+
     private final List<Sample> samples;
     private final List<ImageInfo> imageInfos;
     private ComboBox<Project> projectBox;
@@ -114,41 +84,11 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         imageInfos = new ArrayList<>();
     }
 
-    /////////////////////////////
-
-
     /**
      * {@inheritDoc}
      */
     @Override
     protected Layout getPortletContent(final VaadinRequest request) {
-
-        //////////////////////////////
-        //omero json client
-
-        //FIXME remove hard coded url
-        this.requestURL = "http://134.2.183.129/omero/api/v0/";
-
-
-        this.httpClient = HttpClients.createDefault();
-        BasicHttpContext httpContext = new BasicHttpContext();
-        BasicCookieStore cookieStore = new BasicCookieStore();
-        cookieStore.clear();
-        httpContext.setAttribute(HttpClientContext.COOKIE_STORE, cookieStore);
-
-        try{
-
-            JsonObject ctx = omeroJsonLogin(cm.getOmeroUser(), cm.getOmeroPassword(), 1);
-
-
-            this.omeroSessionKey = ctx.getString("sessionUuid");
-
-            LOG.info(ctx.toString());
-        } catch (Exception e) {
-            LOG.error("Omero json login failed.");
-            LOG.debug(e);
-            return new VerticalLayout();
-        }
 
         try {
             omeroClient = new BasicOMEROClient(cm.getOmeroUser(), cm.getOmeroPassword(), cm.getOmeroHostname(), Integer.parseInt(cm.getOmeroPort()));
@@ -158,10 +98,17 @@ public class OMEROClientPortlet extends QBiCPortletUI {
             return new VerticalLayout();
         }
 
-        ///////////////////////
+        Layout result;
+        try {
+            result = displayData();
+        } catch (Exception e) {
+            LOG.error(e.getMessage());
+            LOG.debug(e);
+            Notification.show(e.getMessage());
+            result = new VerticalLayout();
+        }
 
-
-        return displayData();
+        return result;
     }
 
     private Layout displayData() {
@@ -269,6 +216,18 @@ public class OMEROClientPortlet extends QBiCPortletUI {
                 return (Component) noFullImageLabel;
             }
         }).setCaption("Full Image");
+        Column<ImageInfo, Component> downloadImageColumn = imageInfoGrid.addColumn(imageInfo -> {
+            // Exceptions need to be handled here since they are event based and do not bubble up
+            try {
+                Button downloadImageButton = downloadImage(imageInfo.getImageId());
+                return (Component) downloadImageButton;
+            } catch (Exception e) {
+                LOG.error("Could not generate link for imageId: "+ imageInfo.getImageId());
+                LOG.debug(e);
+                Label noDownloadLabel = new Label("No download available.");
+                return (Component) noDownloadLabel;
+            }
+        }).setCaption("Download Image");
         Column<ImageInfo, Component> imageMetadataColumn = imageInfoGrid.addColumn(imageInfo -> {
             // Exceptions need to be handled here since they are event based and do not bubble up
             try {
@@ -282,6 +241,7 @@ public class OMEROClientPortlet extends QBiCPortletUI {
 
         imageThumbnailColumn.setRenderer(new ComponentRenderer());
         imageFullColumn.setRenderer(new ComponentRenderer());
+        downloadImageColumn.setRenderer(new ComponentRenderer());
         imageMetadataColumn.setRenderer(new ComponentRenderer());
 
 
@@ -326,7 +286,6 @@ public class OMEROClientPortlet extends QBiCPortletUI {
                 imageInfos.clear();
                 samples.clear();
                 // load new samples
-                //FIXME please remove crazy HashMap stuff
                 HashMap<Long, HashMap<String, String>> projectSamples = omeroClient
                     .getDatasets(selectedProject.getId());
                 projectSamples.forEach( (sampleId,sampleInfo) -> {
@@ -347,10 +306,8 @@ public class OMEROClientPortlet extends QBiCPortletUI {
             imageInfos.clear();
             if (event.getFirstSelectedItem().isPresent()) {
                 Sample selectedSample = event.getFirstSelectedItem().get();
-                //TODO load datasets
                 HashMap<Long, String> sampleImageMap = omeroClient.getImages(selectedSample.getId());
                 sampleImageMap.forEach( (imageId, ignoredImageName) -> {
-                    //FIXME replace crazy hashmap stuff
                     HashMap<String, String> imageInformationMap = omeroClient.getImageInfo(selectedSample.getId(), imageId);
 
                     byte[] thumbnail = new byte[0];
@@ -358,16 +315,15 @@ public class OMEROClientPortlet extends QBiCPortletUI {
                     String imageSize = imageInformationMap.get("size");
                     String imageTimePoints = imageInformationMap.get("tps");
                     String imageChannels = imageInformationMap.get("channels");
-                    //FIXME thumbnail image
                     try {
                         ByteArrayInputStream thumbnailInputStream = omeroClient.getThumbnail(selectedSample.getId(), imageId);
                         thumbnail = new byte[thumbnailInputStream.available()];
                         // ignore integer and store in byte array
                         thumbnailInputStream.read(thumbnail);
                         thumbnailInputStream.close();
-                    } catch (Exception e) {
+                    } catch (IOException ioException) {
                         LOG.error("Could not retrieve thumbnail for image:" + imageId);
-                        LOG.debug(e);
+                        LOG.debug(ioException);
                     }
                     ImageInfo imageInfo = new ImageInfo(imageId, imageName, thumbnail, imageSize, imageTimePoints, imageChannels);
                     imageInfos.add(imageInfo);
@@ -396,10 +352,7 @@ public class OMEROClientPortlet extends QBiCPortletUI {
      */
     private void loadProjects() {
         projects.clear();
-        omeroClient.connect();
-        //FIXME remove crazy HashMap stuff
         HashMap<Long, String> projectMap = omeroClient.loadProjects();
-        omeroClient.disconnect();
 
         for (Entry<Long, String> entry : projectMap.entrySet()) {
             Long projectId = entry.getKey();
@@ -417,13 +370,40 @@ public class OMEROClientPortlet extends QBiCPortletUI {
      * @return a vaadin {@link Link} component
      */
     private Link linkToFullImage(long imageId) {
-        String omeroUrl = cm.getOmeroHostname();
-        String requestUrl = "/omero/webclient/img_detail/" + imageId + "?server=1&bsession=" + this.omeroSessionKey;
-        String url = "http://" + omeroUrl + requestUrl;
-        Resource fullImage = new ExternalResource(url);
+        String requestUrl = omeroClient.composeImageDetailAddress(imageId);
+        Resource fullImage = new ExternalResource(requestUrl);
         Link fullImageLink = new Link("Open Image", fullImage);
         fullImageLink.setTargetName("_blank");
         return fullImageLink;
+    }
+
+    /**
+     * Allows the user to download an image in ome.tiff format for a given image id
+     *
+     * @param imageId the image for which a download link should be generated
+     * @return a vaadin {@link Button} component linking to the download
+     */
+    private Button downloadImage(long imageId) {
+        Button downloadButton = new Button("Download Image");
+        downloadButton.setEnabled(false);
+
+        try{
+            downloadButton.addClickListener(clickEvent -> {
+                try {
+                    String imagePath = omeroClient.downloadOmeTiff(imageId);
+                    getUI().getPage().open(imagePath,"_blank");
+                }
+                catch (Exception e)
+                {
+                    LOG.error("Could not generate path to ome.tiff file for image: " + imageId);
+                    LOG.debug(e);
+                }
+            });
+            downloadButton.setEnabled(true);
+        }catch(Exception e){
+            throw new RuntimeException("",e);
+        }
+        return downloadButton;
     }
 
     /**
@@ -504,13 +484,13 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         metadataButton.setEnabled(false);
         Collection<MetadataProperty> metadataProperties;
 
-            metadataProperties = collectMetadata(imageId);
-            if (!metadataProperties.isEmpty()) {
+        metadataProperties = collectMetadata(imageId);
+        if (!metadataProperties.isEmpty()) {
             metadataButton.setEnabled(true);
-            }
-            else {
-                return metadataButton;
-            }
+        }
+        else {
+            return metadataButton;
+        }
 
         metadataButton.addClickListener(clickEvent -> {
             try {
@@ -528,6 +508,7 @@ public class OMEROClientPortlet extends QBiCPortletUI {
 
     private void refreshGrid(Grid<?> grid) {
         grid.getDataProvider().refreshAll();
+        grid.setSizeFull();
     }
 
     /**
@@ -548,99 +529,5 @@ public class OMEROClientPortlet extends QBiCPortletUI {
 
         headerRow.getCell(column).setComponent(filterTextField);
         filterTextField.setSizeFull();
-    }
-
-    //////////////////////////////////
-    //omero json client
-
-    private JsonStructure get(String urlString, Map<String, String> params)
-            throws Exception {
-        HttpGet httpGet = null;
-        if (params == null || params.isEmpty()) {
-            httpGet = new HttpGet(urlString);
-        } else {
-            URIBuilder builder = new URIBuilder(urlString);
-            for (Entry<String, String> e : params.entrySet()) {
-                builder.addParameter(e.getKey(), e.getValue());
-            }
-            httpGet = new HttpGet(builder.build());
-        }
-
-        HttpResponse res = httpClient.execute(httpGet);
-        try (JsonReader reader = Json.createReader(new BufferedReader(
-                new InputStreamReader(res.getEntity().getContent())))) {
-            return reader.read();
-        }
-    }
-
-    private JsonStructure post(String url, Map<String, String> params)
-            throws HttpException, ClientProtocolException, IOException {
-
-        HttpPost httpPost = new HttpPost(url);
-        if (params != null && !params.isEmpty()) {
-            List<NameValuePair> nvps = new ArrayList<NameValuePair>();
-            for (Entry<String, String> entry : params.entrySet()) {
-                nvps.add(new BasicNameValuePair(entry.getKey(), entry
-                        .getValue()));
-            }
-            httpPost.setEntity(new UrlEncodedFormEntity(nvps));
-        }
-        httpPost.addHeader("X-CSRFToken", this.token);
-        HttpResponse res = httpClient.execute(httpPost);
-        if (res.getStatusLine().getStatusCode() != 200) {
-            throw new HttpException("POST failed. URL: " + url + " Status:" + res.getStatusLine());
-        }
-
-        try (JsonReader reader = Json.createReader(new BufferedReader(
-                new InputStreamReader(res.getEntity().getContent())))) {
-            return reader.read();
-        }
-    }
-
-    public Map<String, String> omeroJsonGetURLs() throws Exception {
-        JsonObject json = (JsonObject) get(requestURL, null);
-
-        Map<String, String> urls = new HashMap<>();
-
-        for (Entry<String, JsonValue> entry : json.entrySet()) {
-            urls.put(entry.getKey(),
-                    ((JsonString) entry.getValue()).getString());
-        }
-
-        return urls;
-    }
-
-    private String getCSRFToken() throws Exception {
-        String url = serviceURLs.get("url:token");
-        JsonObject json = (JsonObject) get(url, null);
-        return json.getJsonString("data").getString();
-    }
-
-    public JsonObject omeroJsonLogin(String username, String password, int serverId)
-            throws Exception {
-        // make sure we have all the necessary URLs
-        //omeroJsonGetVersion();
-        //this.requestURL = "http://134.2.183.129/omero/api/v0/";
-        this.serviceURLs = omeroJsonGetURLs();
-
-        // make sure we have a CSRF token
-        if (this.token == null) {
-            this.token = getCSRFToken();
-        }
-
-        String url = serviceURLs.get("url:login");
-        Map<String, String> params = new HashMap<String, String>();
-        params.put("server", "" + serverId);
-        params.put("username", username);
-        params.put("password", password);
-
-        try {
-            JsonObject response = (JsonObject) post(url, params);
-            return response.getJsonObject("eventContext");
-        } catch (Exception e) {
-            LOG.error("JSON login to omero failed.");
-            LOG.debug(e);
-        }
-        return null;
     }
 }
