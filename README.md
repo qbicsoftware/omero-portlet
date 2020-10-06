@@ -1,8 +1,14 @@
 # OMERO Client
 
-[![Build Status](https://travis-ci.com/qbicsoftware/omero-client-portlet.svg?branch=development)](https://travis-ci.com/qbicsoftware/omero-client-portlet)[![Code Coverage]( https://codecov.io/gh/qbicsoftware/omero-client-portlet/branch/development/graph/badge.svg)](https://codecov.io/gh/qbicsoftware/omero-client-portlet)
+[![Build Status](https://travis-ci.com/qbicsoftware/omero-portlet.svg?branch=master)](https://travis-ci.com/qbicsoftware/omero-portlet)
+![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/qbicsoftware/omero-portlet)
+[![Sonatype Nexus Releases](https://img.shields.io/nexus/r/life.qbic/omero-portlet?nexusVersion=3&server=https%3A%2F%2Fqbic-repo.qbic.uni-tuebingen.de%2F)](https://qbic-repo.qbic.uni-tuebingen.de/service/rest/repository/browse/maven-releases/life/qbic/omero-portlet/)
+![Java Language](https://img.shields.io/badge/language-java-blue.svg)
+[![License](https://img.shields.io/github/license/qbicsoftware/omero-portlet
+)](https://travis-ci.com/qbicsoftware/omero-portlet)
+[![DOI](https://zenodo.org/badge/176299724.svg)](https://zenodo.org/badge/latestdoi/176299724)
 
-OMERO Client, version 1.1.0 - Java client for the OMERO server
+OMERO image visualisation portlet - A Vaadin app for visualising image data.
 
 ## Author
 Created by Luis Kuhn Cuellar (luis.kuhn@qbic.uni-tuebingen.de).
