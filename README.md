@@ -8,7 +8,7 @@
 )](https://travis-ci.com/qbicsoftware/omero-portlet)
 [![DOI](https://zenodo.org/badge/176299724.svg)](https://zenodo.org/badge/latestdoi/176299724)
 
-OMERO image visualisation portlet - A Vaadin app for visualising image data.
+OMERO image visualisation portlet - A Vaadin app for visualising image data in qPortal.
 
 ## Author
 Created by Luis Kuhn Cuellar (luis.kuhn@qbic.uni-tuebingen.de).
