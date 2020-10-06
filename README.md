@@ -1,4 +1,4 @@
-# OMERO Client
+# OMERO visualisation portlet
 
 [![Build Status](https://travis-ci.com/qbicsoftware/omero-portlet.svg?branch=master)](https://travis-ci.com/qbicsoftware/omero-portlet)
 ![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/qbicsoftware/omero-portlet)
@@ -6,7 +6,7 @@
 ![Java Language](https://img.shields.io/badge/language-java-blue.svg)
 [![License](https://img.shields.io/github/license/qbicsoftware/omero-portlet
 )](https://travis-ci.com/qbicsoftware/omero-portlet)
-[![DOI](https://zenodo.org/badge/176299724.svg)](https://zenodo.org/badge/latestdoi/176299724)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4068252.svg)](https://doi.org/10.5281/zenodo.4068252)
 
 OMERO image visualisation portlet - A Vaadin app for visualising image data in qPortal.
 
