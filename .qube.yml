@@ -9,12 +9,12 @@ project_slug: omero-portlet
 project_slug_no_hyphen: omero_portlet
 template_version: '1.0.2 # <<QUBE_NO_BUMP>>'
 template_handle: portlet-groovy
-github_username: sven1103
-creator_github_username: sven1103
+github_username: qbicsoftware
+creator_github_username: luiskuhn
 is_github_repo: false
 is_repo_private: false
 is_github_orga: false
-copyright_holder: QBiC
+copyright_holder: Luis Kuhn
 license: MIT
 main_class_prefix: Qbic
 use_openbis_client: yes
