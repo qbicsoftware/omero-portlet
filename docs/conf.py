@@ -47,8 +47,8 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'omero-portlet'
-copyright = "2020, Sven Fillinger"
-author = "Sven Fillinger"
+copyright = "2020, Luis Kuhn"
+author = "Luis Kuhn"
 
 # The version info for the project you're documenting, acts as replacement
 # for |version| and |release|, also used in various other places throughout
