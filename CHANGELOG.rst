@@ -9,6 +9,8 @@ This project adheres to `Semantic Versioning <https://semver.org/>`_.
 
 **Added**
 
+* Image dataset browsing and visualisation for qPortal
+
 **Fixed**
 
 **Dependencies**
