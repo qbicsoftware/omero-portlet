@@ -11,11 +11,36 @@
 OMERO image visualisation portlet - A Vaadin app for visualising image data in qPortal.
 
 ## Author
+
 Created by Luis Kuhn Cuellar (luis.kuhn@qbic.uni-tuebingen.de).
 
 ## Description
 
+### Purpose of the portlet
+
+//TODO write down what problems should be solved with this software
+
+### Functionality
+
+//TODO add screenshots of the deployed portlet
+
+//TODO write down how this portlet solves the problems previousle stated in #purpose-of-the-portlet
+
+### Implementation
+
+//TODO write down implementation details (e.g. architecture)
+
 ## How to Install
+
+### qPortal
+
+//TODO link qPortal documentation
+
+### Python Environment
+
+//TODO link imaging etl README
+
+
 
 ## How to Run
 ```bash
