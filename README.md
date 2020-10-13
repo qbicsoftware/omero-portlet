@@ -32,17 +32,39 @@ Created by Luis Kuhn Cuellar (luis.kuhn@qbic.uni-tuebingen.de).
 
 ## How to Install
 
-### qPortal
+* the imaging solution requires 3 main components
+* liferay portal
+* omero server
+* openBIS instance
 
-//TODO link qPortal documentation
+### Set up the portal
 
-### Python Environment
-
-//TODO link imaging etl README
+//TODO link to omero installation documentation or write it here yourself
 
 
+
+This portlet requires you to have a portal running on Liferay and a biological data management system set up in openBIS.
+
+For further instructions on the infrastructure setup please see https://portal.qbic.uni-tuebingen.de/portal/web/qbic/software#instructions
+
+
+
+//TODO detail portal configuration (java security file, don't know how it was done in the end)
+
+### Configure ETL script
+
+* incoming data registered via ETL script
+* ETL script has some dependencies, link etl repo here
+  * set up python environment
+  * (configure omero server ??)
+  * configure openBIS (e.g. credentials, user)
+
+
+
+## TODO: WHAT TO DO ABOUT THIS SECTION?
 
 ## How to Run
+
 ```bash
 mvn jetty:run -Djava.security.properties="allow_tls.properties"
 ```
