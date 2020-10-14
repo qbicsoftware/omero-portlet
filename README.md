@@ -18,7 +18,9 @@ Created by Luis Kuhn Cuellar (luis.kuhn@qbic.uni-tuebingen.de).
 
 ### Purpose of the portlet
 
-//TODO write down what problems should be solved with this software
+The large volume of data produced by various omics disciplines (e.g. genomics, transcriptomics, proteomics, metabolomics), biomedical imaging techniques (e.g. X-ray CT and PET), and the unprecedented increase in spatial resolution achieved by conventional confocal and super-resolution light microscopy and modern electron microscopes present a challenge for long-term storage and management of these high-dimensional digital assets. Itt is of particular importance to employ rich metadata models that allow researchers to relate data from different disciplines, and design experiments using an integrative approach to handle both, multilayer omics, as well as biomedical imaging data. The integration of metadata from multi-omics experiments together with imaging metadata is an integral step in discovering new insights. 
+
+This portlet provides users with an interface that facilitates retrieval of metadata, both from experimental design and associated images.
 
 
 
