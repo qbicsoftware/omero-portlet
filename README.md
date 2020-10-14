@@ -28,9 +28,7 @@ Created by Luis Kuhn Cuellar (luis.kuhn@qbic.uni-tuebingen.de).
 
 //TODO write down how this portlet solves the problems previousle stated in #purpose-of-the-portlet
 
-### Implementation
 
-//TODO write down implementation details (e.g. architecture)
 
 ## How to Install
 
