@@ -44,4 +44,4 @@ For further instructions on the infrastructure setup please refer to the [instru
 
 ### ETL routine
 
-Here at QBiC we use automated ETL routines to register data. These routines produce quality measures to ensure that the data uploaded meats our standard. Further information on the ETL routines can be found in our [open source ETL repository](https://github.com/qbicsoftware/etl-scripts#etl-openbis-dropboxes). 
+Here at QBiC we use automated ETL routines to register data. These routines produce quality measures to ensure that the data uploaded meets our standard. Further information on the ETL routines can be found in our [open source ETL repository](https://github.com/qbicsoftware/etl-scripts#etl-openbis-dropboxes). 
