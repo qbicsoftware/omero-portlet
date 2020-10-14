@@ -32,12 +32,11 @@ Created by Luis Kuhn Cuellar (luis.kuhn@qbic.uni-tuebingen.de).
 
 ## How to Install
 
-* the imaging solution requires 3 main components
-* liferay portal
-* omero server
-* openBIS instance
+The `omero-portlet` does provide a comprehensive user interface for scientists to interact with their imaging data. For the portlet to run three other main components are required. First the Liferay portal, this portal provides basic functionality for portlet deployment. The second dependency is the OMERO server itself. OMERO offers a platform to store and retrieve imaging data on request. This imaging solution is integrated in our infrastructure and connected to an openBIS data management instance using ETL routines. Information on the ETL routines can be found in section [ETL routine](#etl-routine). 
 
-### Set up the portal
+Instructions on setting up the Liferay portal, openBIS and OMERO up are located in section [Setting up the portal](#setting-up-the-portal).
+
+### Setting up the portal
 
 This portlet requires you to have a portal running on Liferay and a biological data management system set up in openBIS. In addition to the basic setup an OMERO server instance is required for this portlet. 
 
