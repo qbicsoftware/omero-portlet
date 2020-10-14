@@ -28,7 +28,7 @@ Created by Luis Kuhn Cuellar (luis.kuhn@qbic.uni-tuebingen.de).
 
 This application provides easy access to imaging metadata and image visualization, using the *OMERO Client* component to query the OMERO server. This portlet also accesses OMERO.web functionality, in particular the 5D image viewers. 
 
-For images that were uploaded in a proprietary format, this portlet enables the user to download images from the OMERO server  in the open [`OME-TIFF`](https://docs.openmicroscopy.org/ome-model/5.6.3/ome-tiff/) format.
+For images that were uploaded in a proprietary format, this portlet enables the user to download images from the OMERO server  in the open [`OME-TIFF`](https://github.com/ome/ome-model/blob/master/docs/sphinx/ome-tiff/index.rst) format.
 
 The problem of association with experimental metadata is solved by integration of imaging information with metadata stored in the openBIS instance. Thus enabeling scientists to associate image infromation with their projects.
 
