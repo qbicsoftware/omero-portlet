@@ -20,6 +20,8 @@ Created by Luis Kuhn Cuellar (luis.kuhn@qbic.uni-tuebingen.de).
 
 //TODO write down what problems should be solved with this software
 
+
+
 ### Functionality
 
 //TODO add screenshots of the deployed portlet
@@ -47,24 +49,6 @@ This portlet requires you to have a portal running on Liferay and a biological d
 
 For further instructions on the infrastructure setup please see https://portal.qbic.uni-tuebingen.de/portal/web/qbic/software#instructions
 
+### ETL routine
 
-
-//TODO detail portal configuration (java security file, don't know how it was done in the end)
-
-### Configure ETL script
-
-* incoming data registered via ETL script
-* ETL script has some dependencies, link etl repo here
-  * set up python environment
-  * (configure omero server ??)
-  * configure openBIS (e.g. credentials, user)
-
-
-
-## TODO: WHAT TO DO ABOUT THIS SECTION?
-
-## How to Run
-
-```bash
-mvn jetty:run -Djava.security.properties="allow_tls.properties"
-```
+Here at QBiC we use automated ETL routines to register data. These routines produce quality measures to ensure that the data uploaded meats our standard. Further information on the ETL routines can be found in our [open source ETL repository](https://github.com/qbicsoftware/etl-scripts#etl-openbis-dropboxes). 
