@@ -41,13 +41,9 @@ Created by Luis Kuhn Cuellar (luis.kuhn@qbic.uni-tuebingen.de).
 
 ### Set up the portal
 
-//TODO link to omero installation documentation or write it here yourself
+This portlet requires you to have a portal running on Liferay and a biological data management system set up in openBIS. In addition to the basic setup an OMERO server instance is required for this portlet. 
 
-
-
-This portlet requires you to have a portal running on Liferay and a biological data management system set up in openBIS.
-
-For further instructions on the infrastructure setup please see https://portal.qbic.uni-tuebingen.de/portal/web/qbic/software#instructions
+For further instructions on the infrastructure setup please see https://portal.qbic.uni-tuebingen.de/portal/web/qbic/software#instructions.
 
 ### ETL routine
 
