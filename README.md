@@ -51,7 +51,7 @@ This portlet requires a qPortal environment, which has as a prerequisite the fol
 1. A portal running on [Liferay](https://www.liferay.com/de/home). Our portal has been tested on [Liferay 6.2 bundled with Tomcat](http://www.liferay.com/downloads/liferay-portal/available-releases).
 2. An [OpenBIS](https://openbis.ch/) server (biological data management system). 
 3. An OMERO server instance, this software is currently compatible with version [5.4.10](https://docs.openmicroscopy.org/omero/5.4.10/). 
-4. We are using an additional MySQL database to store metadata, such as project investigators and their affiliations, as well as longer project descriptions. See the [instructions on our portal](https://portal.qbic.uni-tuebingen.de/portal/web/qbic/software#instructions).
+4. We use an additional MySQL database to store metadata, such as project investigators and their affiliations, as well as longer project descriptions. See the [instructions on our portal](https://portal.qbic.uni-tuebingen.de/portal/web/qbic/software#instructions).
 
 The source code of the portlets which are part of qPortal can be found in our github [repository](https://github.com/qbicsoftware). Detailed information on how to use the provided portlets can also be found in the corresponding repositories.
 
