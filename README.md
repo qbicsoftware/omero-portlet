@@ -56,7 +56,7 @@ This portlet requires a qPortal environment, which has as a prerequisite the fol
 The source code of the portlets which are part of qPortal can be found in our github [repository](https://github.com/qbicsoftware). Detailed information on how to use the provided portlets can also be found in the corresponding repositories.
 
 The following are directly related portlets:
-1. [qbrowser](https://github.com/qbicsoftware/projectwizard)
+1. [qBrowser](https://github.com/qbicsoftware/projectwizard)
 2. [qWizard](https://github.com/qbicsoftware/qnavigator)
 
 ### ETL routine
