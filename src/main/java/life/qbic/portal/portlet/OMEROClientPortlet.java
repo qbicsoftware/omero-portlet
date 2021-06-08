@@ -52,14 +52,12 @@ import org.apache.logging.log4j.Logger;
 /**
  * Entry point for the portlet omero-client-portlet.
  *
- * This class derives from {@link QBiCPortletUI}, which can be found in the
- * @code portal-utils-lib library.
- * @see <a href=https://github.com/qbicsoftware/portal-utils-lib>portal-utils-lib</a>
- * @since 1.0.0
  */
+
 @Theme("mytheme")
 @SuppressWarnings("serial")
 @Widgetset("life.qbic.portal.portlet.AppWidgetSet")
+
 public class OMEROClientPortlet extends QBiCPortletUI {
 
     private static final Logger LOG = LogManager.getLogger(OMEROClientPortlet.class);
