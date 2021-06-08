@@ -10,4 +10,7 @@ Development Lead
 Contributors
 ------------
 
-None yet. Why not be the first?
+* Luis Kuhn (Creator)
+* Jennifer Bödker
+* Steffen Greiner
+* Tobias Koch
