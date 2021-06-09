@@ -4,12 +4,12 @@ Changelog
 
 This project adheres to `Semantic Versioning <https://semver.org/>`_.
 
-1.1.1 (2021-06-09)
+1.2.0 (2021-06-09)
 ------------------
 
 **Added**
 
-* Added a window for the image viewer
+* Added a window for the image viewer (`#28 <https://github.com/qbicsoftware/omero-portlet/pull/28>`_)
 
 **Fixed**
 
