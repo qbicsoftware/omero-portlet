@@ -2,7 +2,7 @@ full_name: Sven Fillinger
 email: sven.fillinger@qbic.uni-tuebingen.de
 project_name: omero-portlet
 project_short_description: Omero-portlet. A imaging visualisation portlet for qPortal.
-version: 1.1.0
+version: 1.2.0
 domain: portlet
 language: groovy
 project_slug: omero-portlet
