@@ -25,6 +25,7 @@ import com.vaadin.ui.VerticalLayout;
 import com.vaadin.ui.Window;
 import com.vaadin.ui.components.grid.HeaderRow;
 import com.vaadin.ui.renderers.ComponentRenderer;
+import com.vaadin.ui.BrowserFrame;
 
 import java.io.*;
 import java.nio.file.Path;
@@ -52,14 +53,12 @@ import org.apache.logging.log4j.Logger;
 /**
  * Entry point for the portlet omero-client-portlet.
  *
- * This class derives from {@link QBiCPortletUI}, which can be found in the
- * @code portal-utils-lib library.
- * @see <a href=https://github.com/qbicsoftware/portal-utils-lib>portal-utils-lib</a>
- * @since 1.0.0
  */
+
 @Theme("mytheme")
 @SuppressWarnings("serial")
 @Widgetset("life.qbic.portal.portlet.AppWidgetSet")
+
 public class OMEROClientPortlet extends QBiCPortletUI {
 
     private static final Logger LOG = LogManager.getLogger(OMEROClientPortlet.class);
@@ -154,13 +153,15 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         projectBox.setDataProvider(new ListDataProvider<>(projects));
         projectBox.setItemCaptionGenerator(Project::getName);
 
-        projectLabel = new Label("<br>", ContentMode.HTML);
-
         refreshButton = new Button("Refresh");
         refreshButton.setWidth("100%");
 
+        projectLabel = new Label("<br>", ContentMode.HTML);
+        projectLabel.setWidth("100%");
+
         projectLayout.addComponent(projectBox);
         projectLayout.addComponent(refreshButton);
+        projectLayout.setWidth("100%");
 
         topPanelLayout.addComponent(projectLayout);
         topPanelLayout.addComponent(projectLabel);
@@ -173,7 +174,6 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         hsplit.setWidth("100%");
         hsplit.setHeight("600px");
 
-
         ///////////////////////
         // sample grid
 
@@ -184,7 +184,6 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         sampleGrid.setSelectionMode(SelectionMode.SINGLE);
         sampleGrid.setCaption("Samples");
         sampleGrid.setSizeFull();
-
 
         Column<Sample, String> sampleCodeColumn = sampleGrid.addColumn(Sample::getCode).setCaption("Code");
         Column<Sample, String> sampleNameColumn = sampleGrid.addColumn(Sample::getName).setCaption("Name");
@@ -202,13 +201,25 @@ public class OMEROClientPortlet extends QBiCPortletUI {
             return (Component) new Image("",thumbnailResource);
         }).setCaption("Thumbnail");
         Column<ImageInfo, String> imageNameColumn = imageInfoGrid.addColumn(ImageInfo::getName).setCaption("Name");
-        Column<ImageInfo, String> imageSizeColumn = imageInfoGrid.addColumn(ImageInfo::getSize).setCaption("Size (X,Y,Z)");
-        Column<ImageInfo, String> imageTpsColumn = imageInfoGrid.addColumn(ImageInfo::getTimePoints).setCaption("Image Time Points");
+        //Column<ImageInfo, String> imageSizeColumn = imageInfoGrid.addColumn(ImageInfo::getSize).setCaption("Size (X,Y,Z)");
+        //Column<ImageInfo, String> imageTpsColumn = imageInfoGrid.addColumn(ImageInfo::getTimePoints).setCaption("Image Time Points");
+
+        Column<ImageInfo, String> imageSizeColumn = imageInfoGrid.addColumn(imageInfo -> {
+            // Exceptions need to be handled here since they are event based and do not bubble up
+            try{
+                return imageInfo.getSize() + " x " + imageInfo.getTimePoints();
+            } catch (Exception e) {
+                LOG.error("Could not generate image size for imageId: " + imageInfo.getImageId());
+                LOG.debug(e);
+                return "Not available";
+            }
+        }).setCaption("Spatio-temporal Size (X x Y x Z x T)");
+
         Column<ImageInfo, String> imageChannelsColumn = imageInfoGrid.addColumn(ImageInfo::getChannels).setCaption("Channels");
         Column<ImageInfo, Component> imageFullColumn = imageInfoGrid.addColumn(imageInfo -> {
             // Exceptions need to be handled here since they are event based and do not bubble up
             try{
-                return (Component) linkToFullImage(imageInfo.getImageId());
+                return (Component) imageLinkButton(imageInfo.getImageId()); //linkToFullImage(imageInfo.getImageId());
             } catch (Exception e) {
                 LOG.error("Could not generate full image link for imageId: " + imageInfo.getImageId());
                 LOG.debug(e);
@@ -256,7 +267,7 @@ public class OMEROClientPortlet extends QBiCPortletUI {
 
         setupColumnFilter(imageListProvider, imageNameColumn, imageFilterRow);
         setupColumnFilter(imageListProvider, imageSizeColumn, imageFilterRow);
-        setupColumnFilter(imageListProvider, imageTpsColumn, imageFilterRow);
+        //setupColumnFilter(imageListProvider, imageTpsColumn, imageFilterRow);
         setupColumnFilter(imageListProvider, imageChannelsColumn, imageFilterRow);
 
         /////////////////////////////////////
@@ -417,27 +428,51 @@ public class OMEROClientPortlet extends QBiCPortletUI {
 
     private Window metadataWindow(Collection<MetadataProperty> metadataProperties)
     {
-        Window metadataWindow = new Window("Metadata Sub-Window");
+        Window metadataWindow = new Window("Metadata Properties");
         VerticalLayout metadataLayout = new VerticalLayout();
 
         Grid<MetadataProperty> metadataGrid = new Grid<>();
         metadataGrid.setDataProvider(new ListDataProvider<MetadataProperty>(metadataProperties));
         metadataGrid.setSelectionMode(SelectionMode.NONE);
 
-        Column<MetadataProperty, String> nameColumn = metadataGrid.addColumn(
-            MetadataProperty::getName).setCaption("Name");
+        Column<MetadataProperty, String> nameColumn = metadataGrid.addColumn(MetadataProperty::getName).setCaption("Name");
         Column<MetadataProperty, String> valueColumn = metadataGrid.addColumn(metadataProperty -> {
             return metadataProperty.getValue().toString();
         }).setCaption("Value");
-        Column<MetadataProperty, String> descriptionColumn = metadataGrid.addColumn(
-            MetadataProperty::getDescription).setCaption("Description");
+
+        // remove the descriptionColumn, not needed atm
+        //Column<MetadataProperty, String> descriptionColumn = metadataGrid.addColumn(MetadataProperty::getDescription).setCaption("Description");
+
         metadataLayout.addComponent(metadataGrid);
 
         metadataWindow.setContent(metadataLayout);
         metadataWindow.setModal(true);
         metadataWindow.setResizable(false);
         metadataWindow.center();
+
         return metadataWindow;
+    }
+
+    private Window imageViewerWindow(String requestUrl)
+    {
+        Window imageWindow = new Window("Image Viewer");
+        VerticalLayout imageLayout = new VerticalLayout();
+        imageLayout.setSizeFull();
+
+        Resource fullImage = new ExternalResource(requestUrl);
+
+        BrowserFrame browser = new BrowserFrame("", fullImage);
+        browser.setSizeFull();
+        imageLayout.addComponent(browser);
+
+        imageWindow.setContent(imageLayout);
+        imageWindow.setModal(true);
+        imageWindow.setResizable(true);
+        imageWindow.center();
+        imageWindow.setWidth("1500px");
+        imageWindow.setHeight("1000px");
+
+        return imageWindow;
     }
 
     /**
@@ -454,12 +489,11 @@ public class OMEROClientPortlet extends QBiCPortletUI {
             List metadataList = omeroClient.fetchMapAnnotationDataForImage(imageId);
             for (int i = 0; i < metadataList.size(); i++) {
                 MapAnnotationData currentMapAnnotation = (MapAnnotationData) metadataList.get(i);
-                List<NamedValue> list = (List<NamedValue>) currentMapAnnotation
-                    .getContent();
+                List<NamedValue> list = (List<NamedValue>) currentMapAnnotation.getContent();
                 for (NamedValue namedValue : list) {
                     String metaDataKey = namedValue.name;
                     String metaDataValue = namedValue.value;
-                    metadataProperties.add(new MetadataProperty<String>("Key: " + metaDataKey, "Value " + metaDataValue, "example property no."));
+                    metadataProperties.add(new MetadataProperty<String>(metaDataKey, metaDataValue, "None"));
                 }
             }
 
@@ -504,6 +538,27 @@ public class OMEROClientPortlet extends QBiCPortletUI {
             }
         });
         return metadataButton;
+    }
+
+    private Button imageLinkButton(long imageId) {
+        Button linkButton = new Button("View Image");
+        //linkButton.setEnabled(false);
+
+        String requestUrl = omeroClient.composeImageDetailAddress(imageId);
+        linkButton.setEnabled(true);
+
+        linkButton.addClickListener(clickEvent -> {
+            try {
+                Window imageWindow = imageViewerWindow(requestUrl);
+                addWindow(imageWindow);
+            }
+            catch (Exception e)
+            {
+                LOG.error("Could not generate image viewer subwindow for imageId: " + imageId);
+                LOG.debug(e);
+            }
+        });
+        return linkButton;
     }
 
     private void refreshGrid(Grid<?> grid) {

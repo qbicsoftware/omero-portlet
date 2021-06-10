@@ -36,6 +36,15 @@ Features
 
 * TODO
 
+Notes
+--------
+
+To run locally, avoiding the error:
+javax.net.ssl.SSLHandshakeException: No appropriate protocol (protocol is disabled or cipher suites are inappropriate)
+
+Run with the following cmd:
+mvn jetty:run -Djava.security.properties="allow_tls.properties"
+
 Credits
 -------
 
