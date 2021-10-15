@@ -6,44 +6,24 @@ import com.vaadin.data.provider.ListDataProvider;
 import com.vaadin.server.*;
 import com.vaadin.shared.ui.ContentMode;
 import com.vaadin.shared.ui.ValueChangeMode;
-import com.vaadin.ui.Button;
-import com.vaadin.ui.ComboBox;
-import com.vaadin.ui.Component;
-import com.vaadin.ui.Grid;
+import com.vaadin.ui.*;
 import com.vaadin.ui.Grid.Column;
 import com.vaadin.ui.Grid.SelectionMode;
-import com.vaadin.ui.GridLayout;
-import com.vaadin.ui.HorizontalLayout;
-import com.vaadin.ui.Image;
-import com.vaadin.ui.Label;
-import com.vaadin.ui.Layout;
-import com.vaadin.ui.Link;
-import com.vaadin.ui.Notification;
-import com.vaadin.ui.Panel;
-import com.vaadin.ui.TextField;
-import com.vaadin.ui.VerticalLayout;
-import com.vaadin.ui.Window;
 import com.vaadin.ui.components.grid.HeaderRow;
 import com.vaadin.ui.renderers.ComponentRenderer;
-import com.vaadin.ui.BrowserFrame;
 
 import java.io.*;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import life.qbic.omero.BasicOMEROClient;
 import life.qbic.portal.utils.ConfigurationManager;
 import life.qbic.portal.utils.ConfigurationManagerFactory;
-import loci.poi.util.SystemOutLogger;
-import loci.poi.util.TempFile;
-import omero.gateway.model.FileAnnotationData;
 import omero.gateway.model.MapAnnotationData;
-import omero.model.AnnotationAnnotationLink;
-import omero.model.Format;
-import omero.model.ImageI;
 import omero.model.NamedValue;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang.StringUtils;
@@ -71,6 +51,14 @@ public class OMEROClientPortlet extends QBiCPortletUI {
 
     private final List<Sample> samples;
     private final List<ImageInfo> imageInfos;
+
+    private Sample selectedSample;
+    private HashMap<Long, String> sampleImageMap;
+
+    private Window imageLoadingWindow;
+    private Label imageLoadingStatus;
+    private ProgressBar imageLoadingBar;
+
     private ComboBox<Project> projectBox;
     private Label projectLabel;
     private Button refreshButton;
@@ -81,6 +69,7 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         projects = new ArrayList<>();
         samples = new ArrayList<>();
         imageInfos = new ArrayList<>();
+        sampleImageMap = new HashMap<>();
     }
 
     /**
@@ -213,7 +202,7 @@ public class OMEROClientPortlet extends QBiCPortletUI {
                 LOG.debug(e);
                 return "Not available";
             }
-        }).setCaption("Spatio-temporal Size (X x Y x Z x T)");
+        }).setCaption("Size (X x Y x Z x T)");
 
         Column<ImageInfo, String> imageChannelsColumn = imageInfoGrid.addColumn(ImageInfo::getChannels).setCaption("Channels");
         Column<ImageInfo, Component> imageFullColumn = imageInfoGrid.addColumn(imageInfo -> {
@@ -279,6 +268,23 @@ public class OMEROClientPortlet extends QBiCPortletUI {
 
         imgViewerPanel.setContent(panelContent);
 
+        //////////////////////////
+        // make img loading window
+        imageLoadingWindow = new Window("Loading image data...");
+        HorizontalLayout imageLoadingLayout = new HorizontalLayout();
+
+        imageLoadingStatus = new Label("0%", ContentMode.HTML);
+        imageLoadingBar = new ProgressBar(0.0f);
+
+        imageLoadingLayout.addComponent(imageLoadingBar);
+        imageLoadingLayout.addComponent(imageLoadingStatus);
+
+        imageLoadingWindow.setContent(imageLoadingLayout);
+        imageLoadingWindow.setModal(true);
+        imageLoadingWindow.setResizable(false);
+        imageLoadingWindow.center();
+        imageLoadingWindow.setClosable(false);
+
         ////////////////////////////////////////////////////////////////////////
         registerListeners();
 
@@ -314,36 +320,39 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         });
 
         sampleGrid.addSelectionListener(event -> {
-            imageInfos.clear();
-            if (event.getFirstSelectedItem().isPresent()) {
-                Sample selectedSample = event.getFirstSelectedItem().get();
-                HashMap<Long, String> sampleImageMap = omeroClient.getImages(selectedSample.getId());
-                sampleImageMap.forEach( (imageId, ignoredImageName) -> {
-                    HashMap<String, String> imageInformationMap = omeroClient.getImageInfo(selectedSample.getId(), imageId);
 
-                    byte[] thumbnail = new byte[0];
-                    String imageName = imageInformationMap.get("name");
-                    String imageSize = imageInformationMap.get("size");
-                    String imageTimePoints = imageInformationMap.get("tps");
-                    String imageChannels = imageInformationMap.get("channels");
-                    try {
-                        ByteArrayInputStream thumbnailInputStream = omeroClient.getThumbnail(selectedSample.getId(), imageId);
-                        thumbnail = new byte[thumbnailInputStream.available()];
-                        // ignore integer and store in byte array
-                        thumbnailInputStream.read(thumbnail);
-                        thumbnailInputStream.close();
-                    } catch (IOException ioException) {
-                        LOG.error("Could not retrieve thumbnail for image:" + imageId);
-                        LOG.debug(ioException);
-                    }
-                    ImageInfo imageInfo = new ImageInfo(imageId, imageName, thumbnail, imageSize, imageTimePoints, imageChannels);
-                    imageInfos.add(imageInfo);
-                });
+            imageInfos.clear();
+            sampleImageMap.clear();
+            refreshGrid(imageInfoGrid);
+
+            if (event.getFirstSelectedItem().isPresent()) {
+                selectedSample = event.getFirstSelectedItem().get();
+                sampleImageMap = omeroClient.getImages(selectedSample.getId());
+
+                final ImageDataLoadingThread thread = new ImageDataLoadingThread();
+                thread.start();
+
+                // Enable polling and set frequency to 0.5 seconds
+                UI.getCurrent().setPollInterval(500);
+
+                try {
+                    addWindow(imageLoadingWindow);
+                }
+                catch (Exception e)
+                {
+                    LOG.error("Could not generate loading window");
+                    LOG.debug(e);
+                }
+
+
             } else {
                 //remove selected images
                 imageInfos.clear();
+                sampleImageMap.clear();
             }
-            refreshGrid(imageInfoGrid);
+
+            //refreshGrid(imageInfoGrid);
+
         });
 
         refreshButton.addClickListener(event -> {
@@ -475,6 +484,7 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         return imageWindow;
     }
 
+
     /**
      * Collects and converts the metadata stored on the omero server for a given imageId into a MetadataProperty Object
      *
@@ -584,5 +594,79 @@ public class OMEROClientPortlet extends QBiCPortletUI {
 
         headerRow.getCell(column).setComponent(filterTextField);
         filterTextField.setSizeFull();
+    }
+
+    // A thread to do some work
+    class ImageDataLoadingThread extends Thread {
+        // Volatile because read in another thread in access()
+        volatile double img_count = 0.0;
+
+        @Override
+        public void run() {
+
+            img_count = 0.0;
+
+            sampleImageMap.forEach( (imageId, ignoredImageName) -> {
+                HashMap<String, String> imageInformationMap = omeroClient.getImageInfo(selectedSample.getId(), imageId);
+
+                byte[] thumbnail = new byte[0];
+                String imageName = imageInformationMap.get("name");
+                String imageSize = imageInformationMap.get("size");
+                String imageTimePoints = imageInformationMap.get("tps");
+                String imageChannels = imageInformationMap.get("channels");
+
+                try {
+                    ByteArrayInputStream thumbnailInputStream = omeroClient.getThumbnail(selectedSample.getId(), imageId);
+                    thumbnail = new byte[thumbnailInputStream.available()];
+                    // ignore integer and store in byte array
+                    thumbnailInputStream.read(thumbnail);
+                    thumbnailInputStream.close();
+                } catch (IOException ioException) {
+                    LOG.error("Could not retrieve thumbnail for image:" + imageId);
+                    LOG.debug(ioException);
+                }
+
+                ImageInfo imageInfo = new ImageInfo(imageId, imageName, thumbnail, imageSize, imageTimePoints, imageChannels);
+                imageInfos.add(imageInfo);
+
+
+                // update progress window
+                img_count += 1.0;
+
+                // Update the UI thread-safely
+                access(new Runnable() {
+                    @Override
+                    public void run() {
+                        imageLoadingBar.setValue(new Float((img_count/sampleImageMap.size())));
+                        imageLoadingStatus.setValue("" + ((int)((img_count/sampleImageMap.size())*100)) + "% (" + (int)img_count + " / " + sampleImageMap.size() + ")");
+                    }
+                });
+
+            });
+
+            // Show the "all done" for a while
+            try {
+                sleep( 2000); // Sleep for 2 seconds
+            } catch (InterruptedException e) {}
+
+            // Update the UI thread-safely
+            access(new Runnable() {
+                @Override
+                public void run() {
+                    // Restore the state to initial
+                    imageLoadingBar.setValue(new Float(0.0));
+                    imageLoadingBar.setEnabled(true);
+                    refreshGrid(imageInfoGrid);
+
+                    imageLoadingWindow.close();
+
+                    // Stop polling
+                    UI.getCurrent().setPollInterval(-1);
+
+                    //imageLoadingStatus.setValue("");
+                }
+            });
+
+        }
     }
 }
