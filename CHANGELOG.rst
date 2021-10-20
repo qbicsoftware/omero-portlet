@@ -13,7 +13,7 @@ This project adheres to `Semantic Versioning <https://semver.org/>`_.
 
 **Fixed**
 
-* Improved UI (`#31 <https://github.com/qbicsoftware/omero-portlet/issues/31>`_)
+* Improved UI (Issue `#31 <https://github.com/qbicsoftware/omero-portlet/issues/31>`_)
 
 **Dependencies**
 
