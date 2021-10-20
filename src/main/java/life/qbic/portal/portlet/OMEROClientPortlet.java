@@ -60,6 +60,7 @@ public class OMEROClientPortlet extends QBiCPortletUI {
 
     private ComboBox<Project> projectBox;
     private TextArea projectLabel;
+    private Label projectStats;
     private Button refreshButton;
     private Grid<Sample> sampleGrid;
     private Grid<ImageInfo> imageInfoGrid;
@@ -116,6 +117,7 @@ public class OMEROClientPortlet extends QBiCPortletUI {
 
         Panel imgViewerPanel = new Panel("Image Viewer");
         imgViewerPanel.setSizeFull();
+        imgViewerPanel.setHeight("100%");
 
         VerticalLayout panelContent = new VerticalLayout();
         panelContent.setSpacing(true);
@@ -126,13 +128,14 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         VerticalLayout projectLayout = new VerticalLayout();
         projectLayout.setSpacing(true);
         projectLayout.setMargin(false);
-        projectLayout.setWidth("100%");
+        projectLayout.setWidth("50%");
         projectLayout.setHeight("100%");
 
-        HorizontalLayout topPanelLayout = new HorizontalLayout();
-        //topPanelLayout.setSpacing(true);
-        //topPanelLayout.setMargin(false);
-        topPanelLayout.setWidth("50%");
+        //HorizontalLayout topPanelLayout = new HorizontalLayout();
+        GridLayout topPanelLayout = new GridLayout(3, 1);
+        topPanelLayout.setSpacing(true);
+        topPanelLayout.setMargin(false);
+        topPanelLayout.setWidth("100%");
         topPanelLayout.setHeight("100%");
 
         projectBox = new ComboBox<>("Select project:");
@@ -144,25 +147,34 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         refreshButton = new Button("Refresh");
         refreshButton.setWidth("100%");
 
-        projectLabel = new TextArea("");
+        projectLabel = new TextArea("Description:");
         projectLabel.setWidth("100%");
         projectLabel.setReadOnly(true);
+
+        projectStats = new Label("<b>Project ID: </b>", ContentMode.HTML);
 
         projectLayout.addComponent(projectBox);
         projectLayout.addComponent(refreshButton);
 
-        topPanelLayout.addComponent(projectLayout);
-        //topPanelLayout.setComponentAlignment(projectLayout, Alignment.TOP_LEFT);
-        topPanelLayout.addComponent(projectLabel);
-        //topPanelLayout.setComponentAlignment(projectLabel, Alignment.TOP_LEFT);
+        //topPanelLayout.addComponent(projectLayout);
+        // //topPanelLayout.setComponentAlignment(projectLayout, Alignment.TOP_LEFT);
+        //topPanelLayout.addComponent(projectLabel);
+        // //topPanelLayout.setComponentAlignment(projectLabel, Alignment.TOP_LEFT);
+
+        topPanelLayout.addComponent(projectLayout, 0, 0, 0, 0);
+        topPanelLayout.addComponent(projectLabel, 1, 0, 1, 0);
+        topPanelLayout.addComponent(projectStats, 2, 0, 2, 0);
 
         panelContent.addComponent(topPanelLayout);
 
         // Have a horizontal split panel as its root layout
-        GridLayout hsplit = new GridLayout(6, 2);
-        hsplit.setSpacing(true);
+        //GridLayout hsplit = new GridLayout(6, 2);
+
+        HorizontalSplitPanel hsplit = new HorizontalSplitPanel();
+
+        //hsplit.setSpacing(true);
         hsplit.setWidth("100%");
-        hsplit.setHeight("600px");
+        hsplit.setHeight("100%");
 
         ///////////////////////
         // sample grid
@@ -282,8 +294,13 @@ public class OMEROClientPortlet extends QBiCPortletUI {
 
         /////////////////////////////////////
 
-        hsplit.addComponent(sampleGrid, 0, 0, 1, 1);
-        hsplit.addComponent(imageInfoGrid, 2,0, 5,1);
+        //hsplit.addComponent(sampleGrid, 0, 0, 1, 1);
+        //hsplit.addComponent(imageInfoGrid, 2,0, 5,1);
+
+        hsplit.setFirstComponent(sampleGrid);
+        hsplit.setSecondComponent(imageInfoGrid);
+        // Set the position of the splitter as percentage
+        hsplit.setSplitPosition(25, Sizeable.UNITS_PERCENTAGE);
 
         panelContent.addComponent(hsplit);
 
@@ -325,20 +342,23 @@ public class OMEROClientPortlet extends QBiCPortletUI {
                 // update label
                 //projectLabel.setValue("<b>" + selectedProject.getName() + "</b><br>"
                 //    + selectedProject.getDescription());
-                projectLabel.setValue(selectedProject.getDescription());
+                projectLabel.setValue(String.valueOf(selectedProject.getDescription()));
 
                 // clear unrelated samples
                 imageInfos.clear();
                 samples.clear();
                 // load new samples
-                HashMap<Long, HashMap<String, String>> projectSamples = omeroClient
-                    .getDatasets(selectedProject.getId());
-                projectSamples.forEach( (sampleId,sampleInfo) -> {
+                HashMap<Long, HashMap<String, String>> projectSamples = omeroClient.getDatasets(selectedProject.getId());
+                projectSamples.forEach( (sampleId, sampleInfo) -> {
                     String sampleCode = sampleInfo.get("name");
                     String sampleName = sampleInfo.get("desc");
                     Sample sample = new Sample(sampleId, sampleName, sampleCode);
                     samples.add(sample);
                 });
+
+                projectStats.setValue("<b>Project ID: </b>" + selectedProject.getName() + "<br>"
+                                    + "<b>No. of Samples: </b>" + samples.size() + "<br>");
+
                 refreshGrid(imageInfoGrid);
                 refreshGrid(sampleGrid);
 
@@ -388,9 +408,13 @@ public class OMEROClientPortlet extends QBiCPortletUI {
             projects.clear();
             projectBox.setSelectedItem(null);
             loadProjects();
+
+            projectLabel.setValue("");
+            projectStats.setValue("<b>Project ID: </b>");
+
             refreshGrid(imageInfoGrid);
             refreshGrid(sampleGrid);
-            Notification.show("Refresh was performed.");
+            Notification.show("Refreshed");
         });
     }
 
