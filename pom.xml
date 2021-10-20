@@ -61,6 +61,7 @@
 	</repositories>
 	<dependencyManagement>
 		<dependencies>
+			<!-- This has to be set explicitly to get it to work on the portal -->
 			<dependency>
 				<groupId>org.codehaus.groovy</groupId>
 				<artifactId>groovy-macro</artifactId>
