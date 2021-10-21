@@ -4,18 +4,20 @@ Changelog
 
 This project adheres to `Semantic Versioning <https://semver.org/>`_.
 
-1.3.0 ()
+1.3.0-SNAPSHOT ()
 ------------------
 
 **Added**
 
-* Added window to display loading progress of image data
+* Added window to display loading progress of image data (`#37 <https://github.com/qbicsoftware/omero-portlet/pull/37>`_)
 
 **Fixed**
 
 * Improved UI (Issue `#31 <https://github.com/qbicsoftware/omero-portlet/issues/31>`_)
 
 **Dependencies**
+
+* The version of the groovy-macro dependency needed to be changed to 2.5.4, to have it run in our portal testing environment
 
 **Deprecated**
 

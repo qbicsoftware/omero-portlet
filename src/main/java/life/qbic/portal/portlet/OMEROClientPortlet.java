@@ -647,7 +647,7 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         filterTextField.setSizeFull();
     }
 
-    // A thread to do some work
+    // A thread to load image data and update progress bar
     class ImageDataLoadingThread extends Thread {
         // Volatile because read in another thread in access()
         volatile double img_count = 0.0;
@@ -695,10 +695,13 @@ public class OMEROClientPortlet extends QBiCPortletUI {
 
             });
 
-            // wait a bit
+            // wait a bit after loading finishes
             try {
-                sleep( 500); // 1000 for 1 sec.
-            } catch (InterruptedException e) {}
+                sleep(500); // 1000 for 1 sec.
+            } catch (InterruptedException e) {
+                LOG.error("Error while trying to wait after loading image data");
+                LOG.debug(e);
+            }
 
             // Finally, reset UI thread-safely
             access(new Runnable() {
