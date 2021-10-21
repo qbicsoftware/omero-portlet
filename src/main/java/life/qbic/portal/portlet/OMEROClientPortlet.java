@@ -6,44 +6,23 @@ import com.vaadin.data.provider.ListDataProvider;
 import com.vaadin.server.*;
 import com.vaadin.shared.ui.ContentMode;
 import com.vaadin.shared.ui.ValueChangeMode;
-import com.vaadin.ui.Button;
-import com.vaadin.ui.ComboBox;
-import com.vaadin.ui.Component;
-import com.vaadin.ui.Grid;
+import com.vaadin.ui.*;
 import com.vaadin.ui.Grid.Column;
 import com.vaadin.ui.Grid.SelectionMode;
-import com.vaadin.ui.GridLayout;
-import com.vaadin.ui.HorizontalLayout;
-import com.vaadin.ui.Image;
-import com.vaadin.ui.Label;
-import com.vaadin.ui.Layout;
-import com.vaadin.ui.Link;
-import com.vaadin.ui.Notification;
-import com.vaadin.ui.Panel;
-import com.vaadin.ui.TextField;
-import com.vaadin.ui.VerticalLayout;
-import com.vaadin.ui.Window;
 import com.vaadin.ui.components.grid.HeaderRow;
 import com.vaadin.ui.renderers.ComponentRenderer;
-import com.vaadin.ui.BrowserFrame;
 
 import java.io.*;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map.Entry;
+
 import life.qbic.omero.BasicOMEROClient;
 import life.qbic.portal.utils.ConfigurationManager;
 import life.qbic.portal.utils.ConfigurationManagerFactory;
-import loci.poi.util.SystemOutLogger;
-import loci.poi.util.TempFile;
-import omero.gateway.model.FileAnnotationData;
 import omero.gateway.model.MapAnnotationData;
-import omero.model.AnnotationAnnotationLink;
-import omero.model.Format;
-import omero.model.ImageI;
 import omero.model.NamedValue;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang.StringUtils;
@@ -71,8 +50,17 @@ public class OMEROClientPortlet extends QBiCPortletUI {
 
     private final List<Sample> samples;
     private final List<ImageInfo> imageInfos;
+
+    private Sample selectedSample;
+    private HashMap<Long, String> sampleImageMap;
+
+    private Window imageLoadingWindow;
+    private Label imageLoadingStatus;
+    private ProgressBar imageLoadingBar;
+
     private ComboBox<Project> projectBox;
-    private Label projectLabel;
+    private TextArea projectLabel;
+    private Label projectStats;
     private Button refreshButton;
     private Grid<Sample> sampleGrid;
     private Grid<ImageInfo> imageInfoGrid;
@@ -81,6 +69,7 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         projects = new ArrayList<>();
         samples = new ArrayList<>();
         imageInfos = new ArrayList<>();
+        sampleImageMap = new HashMap<>();
     }
 
     /**
@@ -128,6 +117,7 @@ public class OMEROClientPortlet extends QBiCPortletUI {
 
         Panel imgViewerPanel = new Panel("Image Viewer");
         imgViewerPanel.setSizeFull();
+        imgViewerPanel.setHeight("100%");
 
         VerticalLayout panelContent = new VerticalLayout();
         panelContent.setSpacing(true);
@@ -138,41 +128,53 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         VerticalLayout projectLayout = new VerticalLayout();
         projectLayout.setSpacing(true);
         projectLayout.setMargin(false);
-        projectLayout.setWidth("100%");
+        projectLayout.setWidth("50%");
         projectLayout.setHeight("100%");
 
-        HorizontalLayout topPanelLayout = new HorizontalLayout();
+        //HorizontalLayout topPanelLayout = new HorizontalLayout();
+        GridLayout topPanelLayout = new GridLayout(3, 1);
         topPanelLayout.setSpacing(true);
         topPanelLayout.setMargin(false);
-        topPanelLayout.setWidth("50%");
+        topPanelLayout.setWidth("100%");
         topPanelLayout.setHeight("100%");
 
         projectBox = new ComboBox<>("Select project:");
         projectBox.setEmptySelectionAllowed(false);
-        projectBox.setWidth("100%");
         projectBox.setDataProvider(new ListDataProvider<>(projects));
         projectBox.setItemCaptionGenerator(Project::getName);
+        projectBox.setWidth("100%");
 
         refreshButton = new Button("Refresh");
         refreshButton.setWidth("100%");
 
-        projectLabel = new Label("<br>", ContentMode.HTML);
+        projectLabel = new TextArea("Description:");
         projectLabel.setWidth("100%");
+        projectLabel.setReadOnly(true);
+
+        projectStats = new Label("<b>Project ID: </b>", ContentMode.HTML);
 
         projectLayout.addComponent(projectBox);
         projectLayout.addComponent(refreshButton);
-        projectLayout.setWidth("100%");
 
-        topPanelLayout.addComponent(projectLayout);
-        topPanelLayout.addComponent(projectLabel);
+        //topPanelLayout.addComponent(projectLayout);
+        // //topPanelLayout.setComponentAlignment(projectLayout, Alignment.TOP_LEFT);
+        //topPanelLayout.addComponent(projectLabel);
+        // //topPanelLayout.setComponentAlignment(projectLabel, Alignment.TOP_LEFT);
+
+        topPanelLayout.addComponent(projectLayout, 0, 0, 0, 0);
+        topPanelLayout.addComponent(projectLabel, 1, 0, 1, 0);
+        topPanelLayout.addComponent(projectStats, 2, 0, 2, 0);
 
         panelContent.addComponent(topPanelLayout);
 
         // Have a horizontal split panel as its root layout
-        GridLayout hsplit = new GridLayout(6, 2);
-        hsplit.setSpacing(true);
+        //GridLayout hsplit = new GridLayout(6, 2);
+
+        HorizontalSplitPanel hsplit = new HorizontalSplitPanel();
+
+        //hsplit.setSpacing(true);
         hsplit.setWidth("100%");
-        hsplit.setHeight("600px");
+        hsplit.setHeight("100%");
 
         ///////////////////////
         // sample grid
@@ -193,6 +195,8 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         setupColumnFilter(sampleListDataProvider, sampleCodeColumn, sampleFilterRow);
         setupColumnFilter(sampleListDataProvider, sampleNameColumn, sampleFilterRow);
 
+        sampleNameColumn.setExpandRatio(1);
+
         ///////////////////
         //image grid
         imageInfoGrid = new Grid<>();
@@ -201,21 +205,32 @@ public class OMEROClientPortlet extends QBiCPortletUI {
             return (Component) new Image("",thumbnailResource);
         }).setCaption("Thumbnail");
         Column<ImageInfo, String> imageNameColumn = imageInfoGrid.addColumn(ImageInfo::getName).setCaption("Name");
-        //Column<ImageInfo, String> imageSizeColumn = imageInfoGrid.addColumn(ImageInfo::getSize).setCaption("Size (X,Y,Z)");
-        //Column<ImageInfo, String> imageTpsColumn = imageInfoGrid.addColumn(ImageInfo::getTimePoints).setCaption("Image Time Points");
+        Column<ImageInfo, String> imageChannelsColumn = imageInfoGrid.addColumn(ImageInfo::getChannels).setCaption("Channels");
 
-        Column<ImageInfo, String> imageSizeColumn = imageInfoGrid.addColumn(imageInfo -> {
+//        Column<ImageInfo, String> imageSizeColumn = imageInfoGrid.addColumn(imageInfo -> {
+//            // Exceptions need to be handled here since they are event based and do not bubble up
+//            try{
+//                return imageInfo.getSize() + " x " + imageInfo.getTimePoints();
+//            } catch (Exception e) {
+//                LOG.error("Could not generate image size for imageId: " + imageInfo.getImageId());
+//                LOG.debug(e);
+//                return "Not available";
+//            }
+//        }).setCaption("Size (X x Y x Z x T)");
+
+        Column<ImageInfo, Component> imageSizeColumn = imageInfoGrid.addColumn(imageInfo -> {
             // Exceptions need to be handled here since they are event based and do not bubble up
             try{
-                return imageInfo.getSize() + " x " + imageInfo.getTimePoints();
+                Label sizeLabel = new Label("<b>Spatial: </b>" + imageInfo.getSize() + "<br>" + "<b>Timepoints: </b>" + imageInfo.getTimePoints(), ContentMode.HTML);
+                return (Component) sizeLabel;
             } catch (Exception e) {
                 LOG.error("Could not generate image size for imageId: " + imageInfo.getImageId());
                 LOG.debug(e);
-                return "Not available";
+                Label noContentLabel = new Label("Not available.");
+                return (Component) noContentLabel;
             }
-        }).setCaption("Spatio-temporal Size (X x Y x Z x T)");
+        }).setCaption("Size");
 
-        Column<ImageInfo, String> imageChannelsColumn = imageInfoGrid.addColumn(ImageInfo::getChannels).setCaption("Channels");
         Column<ImageInfo, Component> imageFullColumn = imageInfoGrid.addColumn(imageInfo -> {
             // Exceptions need to be handled here since they are event based and do not bubble up
             try{
@@ -254,7 +269,7 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         imageFullColumn.setRenderer(new ComponentRenderer());
         downloadImageColumn.setRenderer(new ComponentRenderer());
         imageMetadataColumn.setRenderer(new ComponentRenderer());
-
+        imageSizeColumn.setRenderer(new ComponentRenderer());
 
         ListDataProvider<ImageInfo> imageListProvider = new ListDataProvider<>(imageInfos);
         imageInfoGrid.setDataProvider(imageListProvider);
@@ -266,18 +281,51 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         HeaderRow imageFilterRow = imageInfoGrid.appendHeaderRow();
 
         setupColumnFilter(imageListProvider, imageNameColumn, imageFilterRow);
-        setupColumnFilter(imageListProvider, imageSizeColumn, imageFilterRow);
+        //setupColumnFilter(imageListProvider, imageSizeColumn, imageFilterRow);
         //setupColumnFilter(imageListProvider, imageTpsColumn, imageFilterRow);
         setupColumnFilter(imageListProvider, imageChannelsColumn, imageFilterRow);
 
+        // set column display priority
+        imageThumbnailColumn.setExpandRatio(1);
+        imageSizeColumn.setExpandRatio(1);
+        imageFullColumn.setExpandRatio(1);
+        downloadImageColumn.setExpandRatio(1);
+        imageMetadataColumn.setExpandRatio(1);
+
         /////////////////////////////////////
 
-        hsplit.addComponent(sampleGrid, 0, 0, 1, 1);
-        hsplit.addComponent(imageInfoGrid, 2,0, 5,1);
+        //hsplit.addComponent(sampleGrid, 0, 0, 1, 1);
+        //hsplit.addComponent(imageInfoGrid, 2,0, 5,1);
+
+        hsplit.setFirstComponent(sampleGrid);
+        hsplit.setSecondComponent(imageInfoGrid);
+        // Set the position of the splitter as percentage
+        hsplit.setSplitPosition(25, Sizeable.UNITS_PERCENTAGE);
 
         panelContent.addComponent(hsplit);
 
         imgViewerPanel.setContent(panelContent);
+
+        //////////////////////////
+        // make img loading window
+        imageLoadingWindow = new Window("");
+        VerticalLayout imageLoadingLayout = new VerticalLayout();
+
+        imageLoadingStatus = new Label("<b>Loading image data...</b>", ContentMode.HTML);
+        imageLoadingBar = new ProgressBar(0.0f);
+        imageLoadingBar.setWidth("400px");
+
+        imageLoadingLayout.addComponent(imageLoadingStatus);
+        imageLoadingLayout.setComponentAlignment(imageLoadingStatus, Alignment.TOP_CENTER);
+
+        imageLoadingLayout.addComponent(imageLoadingBar);
+
+        imageLoadingWindow.setContent(imageLoadingLayout);
+
+        imageLoadingWindow.setModal(true);
+        imageLoadingWindow.setResizable(false);
+        imageLoadingWindow.center();
+        imageLoadingWindow.setClosable(false);
 
         ////////////////////////////////////////////////////////////////////////
         registerListeners();
@@ -290,21 +338,27 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         projectBox.addSelectionListener(event -> {
             if (event.getSelectedItem().isPresent()) {
                 Project selectedProject = event.getSelectedItem().get();
+
                 // update label
-                projectLabel.setValue("<b>" + selectedProject.getName() + "</b><br>"
-                    + selectedProject.getDescription());
+                //projectLabel.setValue("<b>" + selectedProject.getName() + "</b><br>"
+                //    + selectedProject.getDescription());
+                projectLabel.setValue(String.valueOf(selectedProject.getDescription()));
+
                 // clear unrelated samples
                 imageInfos.clear();
                 samples.clear();
                 // load new samples
-                HashMap<Long, HashMap<String, String>> projectSamples = omeroClient
-                    .getDatasets(selectedProject.getId());
-                projectSamples.forEach( (sampleId,sampleInfo) -> {
+                HashMap<Long, HashMap<String, String>> projectSamples = omeroClient.getDatasets(selectedProject.getId());
+                projectSamples.forEach( (sampleId, sampleInfo) -> {
                     String sampleCode = sampleInfo.get("name");
                     String sampleName = sampleInfo.get("desc");
                     Sample sample = new Sample(sampleId, sampleName, sampleCode);
                     samples.add(sample);
                 });
+
+                projectStats.setValue("<b>Project ID: </b>" + selectedProject.getName() + "<br>"
+                                    + "<b>No. of Samples: </b>" + samples.size() + "<br>");
+
                 refreshGrid(imageInfoGrid);
                 refreshGrid(sampleGrid);
 
@@ -314,36 +368,38 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         });
 
         sampleGrid.addSelectionListener(event -> {
-            imageInfos.clear();
-            if (event.getFirstSelectedItem().isPresent()) {
-                Sample selectedSample = event.getFirstSelectedItem().get();
-                HashMap<Long, String> sampleImageMap = omeroClient.getImages(selectedSample.getId());
-                sampleImageMap.forEach( (imageId, ignoredImageName) -> {
-                    HashMap<String, String> imageInformationMap = omeroClient.getImageInfo(selectedSample.getId(), imageId);
 
-                    byte[] thumbnail = new byte[0];
-                    String imageName = imageInformationMap.get("name");
-                    String imageSize = imageInformationMap.get("size");
-                    String imageTimePoints = imageInformationMap.get("tps");
-                    String imageChannels = imageInformationMap.get("channels");
-                    try {
-                        ByteArrayInputStream thumbnailInputStream = omeroClient.getThumbnail(selectedSample.getId(), imageId);
-                        thumbnail = new byte[thumbnailInputStream.available()];
-                        // ignore integer and store in byte array
-                        thumbnailInputStream.read(thumbnail);
-                        thumbnailInputStream.close();
-                    } catch (IOException ioException) {
-                        LOG.error("Could not retrieve thumbnail for image:" + imageId);
-                        LOG.debug(ioException);
-                    }
-                    ImageInfo imageInfo = new ImageInfo(imageId, imageName, thumbnail, imageSize, imageTimePoints, imageChannels);
-                    imageInfos.add(imageInfo);
-                });
+            imageInfos.clear();
+            sampleImageMap.clear();
+            refreshGrid(imageInfoGrid);
+
+            if (event.getFirstSelectedItem().isPresent()) {
+                selectedSample = event.getFirstSelectedItem().get();
+                sampleImageMap = omeroClient.getImages(selectedSample.getId());
+
+                try {
+                    final ImageDataLoadingThread thread = new ImageDataLoadingThread();
+                    thread.start();
+
+                    // Enable polling and set frequency to 0.5 seconds
+                    UI.getCurrent().setPollInterval(500);
+
+                    addWindow(imageLoadingWindow);
+                }
+                catch (Exception e)
+                {
+                    LOG.error("Error during loading window thread");
+                    LOG.debug(e);
+
+                    imageLoadingWindow.close();
+                }
             } else {
                 //remove selected images
                 imageInfos.clear();
+                sampleImageMap.clear();
             }
-            refreshGrid(imageInfoGrid);
+
+            //refreshGrid(imageInfoGrid);
         });
 
         refreshButton.addClickListener(event -> {
@@ -352,9 +408,13 @@ public class OMEROClientPortlet extends QBiCPortletUI {
             projects.clear();
             projectBox.setSelectedItem(null);
             loadProjects();
+
+            projectLabel.setValue("");
+            projectStats.setValue("<b>Project ID: </b>");
+
             refreshGrid(imageInfoGrid);
             refreshGrid(sampleGrid);
-            Notification.show("Refresh was performed.");
+            Notification.show("Refreshed");
         });
     }
 
@@ -395,7 +455,7 @@ public class OMEROClientPortlet extends QBiCPortletUI {
      * @return a vaadin {@link Button} component linking to the download
      */
     private Button downloadImage(long imageId) {
-        Button downloadButton = new Button("Download Image");
+        Button downloadButton = new Button("Download");
         downloadButton.setEnabled(false);
 
         try{
@@ -514,7 +574,7 @@ public class OMEROClientPortlet extends QBiCPortletUI {
      */
 
     private Button metadataButton(long imageId) {
-        Button metadataButton = new Button("Show Metadata");
+        Button metadataButton = new Button("Show");
         metadataButton.setEnabled(false);
         Collection<MetadataProperty> metadataProperties;
 
@@ -541,7 +601,7 @@ public class OMEROClientPortlet extends QBiCPortletUI {
     }
 
     private Button imageLinkButton(long imageId) {
-        Button linkButton = new Button("View Image");
+        Button linkButton = new Button("View");
         //linkButton.setEnabled(false);
 
         String requestUrl = omeroClient.composeImageDetailAddress(imageId);
@@ -564,6 +624,7 @@ public class OMEROClientPortlet extends QBiCPortletUI {
     private void refreshGrid(Grid<?> grid) {
         grid.getDataProvider().refreshAll();
         grid.setSizeFull();
+
     }
 
     /**
@@ -584,5 +645,82 @@ public class OMEROClientPortlet extends QBiCPortletUI {
 
         headerRow.getCell(column).setComponent(filterTextField);
         filterTextField.setSizeFull();
+    }
+
+    // A thread to load image data and update progress bar
+    class ImageDataLoadingThread extends Thread {
+        // Volatile because read in another thread in access()
+        volatile double img_count = 0.0;
+
+        @Override
+        public void run() {
+
+            img_count = 0.0;
+
+            sampleImageMap.forEach( (imageId, ignoredImageName) -> {
+                HashMap<String, String> imageInformationMap = omeroClient.getImageInfo(selectedSample.getId(), imageId);
+
+                byte[] thumbnail = new byte[0];
+                String imageName = imageInformationMap.get("name");
+                String imageSize = imageInformationMap.get("size");
+                String imageTimePoints = imageInformationMap.get("tps");
+                String imageChannels = imageInformationMap.get("channels");
+
+                try {
+                    ByteArrayInputStream thumbnailInputStream = omeroClient.getThumbnail(selectedSample.getId(), imageId);
+                    thumbnail = new byte[thumbnailInputStream.available()];
+                    // ignore integer and store in byte array
+                    thumbnailInputStream.read(thumbnail);
+                    thumbnailInputStream.close();
+                } catch (IOException ioException) {
+                    LOG.error("Could not retrieve thumbnail for image:" + imageId);
+                    LOG.debug(ioException);
+                }
+
+                ImageInfo imageInfo = new ImageInfo(imageId, imageName, thumbnail, imageSize, imageTimePoints, imageChannels);
+                imageInfos.add(imageInfo);
+
+                // update progress window
+                img_count += 1.0;
+
+                // Update the UI thread-safely
+                access(new Runnable() {
+                    @Override
+                    public void run() {
+                        imageLoadingBar.setValue((float) (img_count / sampleImageMap.size()));
+                        imageLoadingStatus.setValue("<b>Loading image data... " + (int)((img_count/sampleImageMap.size())*100) + "%</b>" +
+                                                    " (" + (int)img_count + " / " + sampleImageMap.size() + ")");
+                    }
+                });
+
+            });
+
+            // wait a bit after loading finishes
+            try {
+                sleep(500); // 1000 for 1 sec.
+            } catch (InterruptedException e) {
+                LOG.error("Error while trying to wait after loading image data");
+                LOG.debug(e);
+            }
+
+            // Finally, reset UI thread-safely
+            access(new Runnable() {
+                @Override
+                public void run() {
+                    // Restore the state to initial
+                    imageLoadingBar.setValue(0.0F);
+                    imageLoadingBar.setEnabled(true);
+                    imageLoadingStatus.setValue("<b>Loading image data...</b>");
+
+                    refreshGrid(imageInfoGrid);
+
+                    imageLoadingWindow.close();
+
+                    // Stop polling
+                    UI.getCurrent().setPollInterval(-1);
+                }
+            });
+
+        }
     }
 }
