@@ -187,8 +187,8 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         sampleGrid.setCaption("Samples");
         sampleGrid.setSizeFull();
 
-        Column<Sample, String> sampleCodeColumn = sampleGrid.addColumn(Sample::getCode).setCaption("Code");
-        Column<Sample, String> sampleNameColumn = sampleGrid.addColumn(Sample::getName).setCaption("Name");
+        Column<Sample, String> sampleCodeColumn = sampleGrid.addColumn(Sample::getCode).setCaption("Sample Code");
+        Column<Sample, String> sampleNameColumn = sampleGrid.addColumn(Sample::getName).setCaption("Sample Name");
 
         HeaderRow sampleFilterRow = sampleGrid.appendHeaderRow();
 
@@ -204,7 +204,7 @@ public class OMEROClientPortlet extends QBiCPortletUI {
             Resource thumbnailResource = new ExternalResource("data:image/jpeg;base64,"+ Base64.encodeBase64String(imageInfo.getThumbnail()));
             return (Component) new Image("",thumbnailResource);
         }).setCaption("Thumbnail");
-        Column<ImageInfo, String> imageNameColumn = imageInfoGrid.addColumn(ImageInfo::getName).setCaption("Name");
+        Column<ImageInfo, String> imageNameColumn = imageInfoGrid.addColumn(ImageInfo::getName).setCaption("Image Name");
         Column<ImageInfo, String> imageChannelsColumn = imageInfoGrid.addColumn(ImageInfo::getChannels).setCaption("Channels");
 
 //        Column<ImageInfo, String> imageSizeColumn = imageInfoGrid.addColumn(imageInfo -> {
