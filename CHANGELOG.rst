@@ -13,7 +13,7 @@ This project adheres to `Semantic Versioning <https://semver.org/>`_.
 
 **Dependencies**
 
-* com.vaadin version -> 8.14.0 (addresses CVE-2021-37714)
+* com.vaadin version 8.9.2 -> 8.14.0 (addresses CVE-2021-37714)
 
 **Deprecated**
 
