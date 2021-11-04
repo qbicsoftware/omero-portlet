@@ -12,11 +12,16 @@
 	</parent>
 
 	<artifactId>omero-portlet</artifactId>
-	<version>1.3.0-SNAPSHOT</version> <!-- <<QUBE_FORCE_BUMP>> -->
+	<version>1.3.1</version> <!-- <<QUBE_FORCE_BUMP>> -->
 	<name>omero-portlet</name>
 	<url>http://github.com/qbicsoftware/omero-portlet</url>
-	<description>Omero-portlet. A imaging visualisation portlet for qPortal.</description>
+	<description>Omero-portlet. An image data visualisation portlet for qPortal.</description>
 	<packaging>war</packaging>
+
+	<properties>
+		<vaadin.version>8.14.0</vaadin.version>
+		<vaadin.plugin.version>8.14.0</vaadin.plugin.version>
+	</properties>
 
 	<repositories>
 		<repository>
