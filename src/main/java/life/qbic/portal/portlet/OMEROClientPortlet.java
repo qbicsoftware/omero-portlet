@@ -57,6 +57,8 @@ public class OMEROClientPortlet extends QBiCPortletUI {
     private Window imageLoadingWindow;
     private Label imageLoadingStatus;
     private ProgressBar imageLoadingBar;
+    private Button cancelImageLoadingButton;
+    private ImageDataLoadingThread imageLoadingThread;
 
     private ComboBox<Project> projectBox;
     private TextArea projectLabel;
@@ -315,10 +317,15 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         imageLoadingBar = new ProgressBar(0.0f);
         imageLoadingBar.setWidth("400px");
 
+        cancelImageLoadingButton = new Button("Cancel");
+        cancelImageLoadingButton.setWidth("100%");
+
         imageLoadingLayout.addComponent(imageLoadingStatus);
         imageLoadingLayout.setComponentAlignment(imageLoadingStatus, Alignment.TOP_CENTER);
 
         imageLoadingLayout.addComponent(imageLoadingBar);
+
+        imageLoadingLayout.addComponent(cancelImageLoadingButton);
 
         imageLoadingWindow.setContent(imageLoadingLayout);
 
@@ -378,8 +385,8 @@ public class OMEROClientPortlet extends QBiCPortletUI {
                 sampleImageMap = omeroClient.getImages(selectedSample.getId());
 
                 try {
-                    final ImageDataLoadingThread thread = new ImageDataLoadingThread();
-                    thread.start();
+                    imageLoadingThread = new ImageDataLoadingThread();
+                    imageLoadingThread.start();
 
                     // Enable polling and set frequency to 0.5 seconds
                     UI.getCurrent().setPollInterval(500);
@@ -415,6 +422,23 @@ public class OMEROClientPortlet extends QBiCPortletUI {
             refreshGrid(imageInfoGrid);
             refreshGrid(sampleGrid);
             Notification.show("Refreshed");
+        });
+
+        cancelImageLoadingButton.addClickListener(event -> {
+
+            imageLoadingThread.interrupt();
+
+            imageInfos.clear();
+            refreshGrid(imageInfoGrid);
+
+            imageLoadingBar.setValue(0.0F);
+            imageLoadingBar.setEnabled(true);
+            imageLoadingStatus.setValue("<b>Loading image data...</b>");
+
+            sampleGrid.deselectAll();
+
+            imageLoadingWindow.close();
+
         });
     }
 
@@ -651,6 +675,7 @@ public class OMEROClientPortlet extends QBiCPortletUI {
     class ImageDataLoadingThread extends Thread {
         // Volatile because read in another thread in access()
         volatile double img_count = 0.0;
+        volatile boolean interrupted = false;
 
         @Override
         public void run() {
@@ -658,27 +683,46 @@ public class OMEROClientPortlet extends QBiCPortletUI {
             img_count = 0.0;
 
             sampleImageMap.forEach( (imageId, ignoredImageName) -> {
-                HashMap<String, String> imageInformationMap = omeroClient.getImageInfo(selectedSample.getId(), imageId);
 
-                byte[] thumbnail = new byte[0];
-                String imageName = imageInformationMap.get("name");
-                String imageSize = imageInformationMap.get("size");
-                String imageTimePoints = imageInformationMap.get("tps");
-                String imageChannels = imageInformationMap.get("channels");
+                // continue if interrupted
+                if(interrupted){
+                    LOG.error("Interruption during data loading iteration!");
+                    return;
+                }
 
                 try {
+                    HashMap<String, String> imageInformationMap = omeroClient.getImageInfo(selectedSample.getId(), imageId);
+
+                    String imageName = imageInformationMap.get("name");
+                    String imageSize = imageInformationMap.get("size");
+                    String imageTimePoints = imageInformationMap.get("tps");
+                    String imageChannels = imageInformationMap.get("channels");
+
                     ByteArrayInputStream thumbnailInputStream = omeroClient.getThumbnail(selectedSample.getId(), imageId);
-                    thumbnail = new byte[thumbnailInputStream.available()];
+                    byte[] thumbnail = new byte[thumbnailInputStream.available()];
                     // ignore integer and store in byte array
                     thumbnailInputStream.read(thumbnail);
                     thumbnailInputStream.close();
-                } catch (IOException ioException) {
-                    LOG.error("Could not retrieve thumbnail for image:" + imageId);
-                    LOG.debug(ioException);
-                }
 
-                ImageInfo imageInfo = new ImageInfo(imageId, imageName, thumbnail, imageSize, imageTimePoints, imageChannels);
-                imageInfos.add(imageInfo);
+                    ImageInfo imageInfo = new ImageInfo(imageId, imageName, thumbnail, imageSize, imageTimePoints, imageChannels);
+                    imageInfos.add(imageInfo);
+
+                } catch (Exception imgException) {
+
+                    interrupted = true;
+
+                    access(new Runnable() {
+                        @Override
+                        public void run() {
+                            imageInfos.clear();
+                            refreshGrid(imageInfoGrid);
+                        }
+                    });
+
+                    LOG.error("Could not retrieve image information:" + imageId);
+                    LOG.debug(imgException);
+                    return;
+                }
 
                 // update progress window
                 img_count += 1.0;
@@ -693,15 +737,28 @@ public class OMEROClientPortlet extends QBiCPortletUI {
                     }
                 });
 
+                // check for interruption
+                try {
+                    sleep(100); // 1000 for 1 sec.
+                } catch (InterruptedException e) {
+                    interrupted = true;
+                    imageInfos.clear();
+                    LOG.error("Catched interrupt!!!!!");
+                }
+
             });
 
             // wait a bit after loading finishes
+            // and check for interruption
             try {
                 sleep(500); // 1000 for 1 sec.
             } catch (InterruptedException e) {
-                LOG.error("Error while trying to wait after loading image data");
+                interrupted = true;
+                LOG.error("Interruption while loading image data ...");
                 LOG.debug(e);
             }
+
+            LOG.error("--------------------->thread ending!");
 
             // Finally, reset UI thread-safely
             access(new Runnable() {
@@ -712,6 +769,10 @@ public class OMEROClientPortlet extends QBiCPortletUI {
                     imageLoadingBar.setEnabled(true);
                     imageLoadingStatus.setValue("<b>Loading image data...</b>");
 
+                    if(interrupted){
+                        LOG.error("--------------------->cleaning up!!");
+                        imageInfos.clear();
+                    }
                     refreshGrid(imageInfoGrid);
 
                     imageLoadingWindow.close();
