@@ -60,7 +60,6 @@ public class OMEROClientPortlet extends QBiCPortletUI {
     private Button cancelImageLoadingButton;
     private ImageDataLoadingThread imageLoadingThread;
 
-    //private ComboBox<Project> projectBox;
     private TextArea projectLabel;
     private Label projectStats;
     private Button refreshButton;
@@ -142,12 +141,6 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         topPanelLayout.setMargin(false);
         topPanelLayout.setWidth("100%");
         topPanelLayout.setHeight("100%");
-
-        //projectBox = new ComboBox<>("Select project:");
-        //projectBox.setEmptySelectionAllowed(false);
-        //projectBox.setDataProvider(new ListDataProvider<>(projects));
-        //projectBox.setItemCaptionGenerator(Project::getName);
-        //projectBox.setWidth("100%");
 
         ////////////
         // project grid
@@ -379,38 +372,6 @@ public class OMEROClientPortlet extends QBiCPortletUI {
     }
 
     private void registerListeners() {
-        // Project selection
-//        projectBox.addSelectionListener(event -> {
-//            if (event.getSelectedItem().isPresent()) {
-//                Project selectedProject = event.getSelectedItem().get();
-//
-//                // update label
-//                //projectLabel.setValue("<b>" + selectedProject.getName() + "</b><br>"
-//                //    + selectedProject.getDescription());
-//                projectLabel.setValue(String.valueOf(selectedProject.getDescription()));
-//
-//                // clear unrelated samples
-//                imageInfos.clear();
-//                samples.clear();
-//                // load new samples
-//                HashMap<Long, HashMap<String, String>> projectSamples = omeroClient.getDatasets(selectedProject.getId());
-//                projectSamples.forEach( (sampleId, sampleInfo) -> {
-//                    String sampleCode = sampleInfo.get("name");
-//                    String sampleName = sampleInfo.get("desc");
-//                    Sample sample = new Sample(sampleId, sampleName, sampleCode);
-//                    samples.add(sample);
-//                });
-//
-//                projectStats.setValue("<b>Project ID: </b>" + selectedProject.getName() + "<br>"
-//                                    + "<b>No. of Samples: </b>" + samples.size() + "<br>");
-//
-//                refreshGrid(imageInfoGrid);
-//                refreshGrid(sampleGrid);
-//
-//            } else {
-//                projectLabel.setValue("");
-//            }
-//        });
 
         projectGrid.addSelectionListener(event -> {
             if (event.getFirstSelectedItem().isPresent()) {
@@ -507,6 +468,8 @@ public class OMEROClientPortlet extends QBiCPortletUI {
 
         cancelImageLoadingButton.addClickListener(event -> {
 
+            LOG.info("--> Warning: about to interrupt loading thread ...");
+
             imageLoadingThread.interrupt();
 
             imageInfos.clear();
@@ -521,7 +484,6 @@ public class OMEROClientPortlet extends QBiCPortletUI {
             sampleGrid.deselectAll();
 
             imageLoadingWindow.close();
-
 
         });
     }
@@ -800,7 +762,7 @@ public class OMEROClientPortlet extends QBiCPortletUI {
                     interrupted = true;
 
                     LOG.error("--> loading error for ID: " + imageId);
-                    LOG.error("--> Error: " + imgException.getMessage() + "<<--");
+                    LOG.error("--> error: " + imgException.getMessage() + "<<--");
                     //LOG.debug(imgException);
                     return;
                 }
