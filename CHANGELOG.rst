@@ -4,6 +4,22 @@ Changelog
 
 This project adheres to `Semantic Versioning <https://semver.org/>`_.
 
+1.3.5 (2021-12-21)
+------------------
+
+**Added**
+
+**Fixed**
+
+* App being blocked by time consuming loading operations, added cancel functionality
+* Fixed UI issue. Project selection was cumbersome, changed to a filterable table
+
+**Dependencies**
+
+* org.apache.logging.log4j 2.16.0 -> 2.17.0 (addresses CVE-2021-44228)
+
+**Deprecated**
+
 1.3.4 (2021-12-17)
 ------------------
 
