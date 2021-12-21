@@ -350,14 +350,16 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         VerticalLayout imageLoadingLayout = new VerticalLayout();
 
         imageLoadingStatus = new Label("<b>Loading image data...</b>", ContentMode.HTML);
+        imageLoadingStatus.setWidth("400px");
+
         imageLoadingBar = new ProgressBar(0.0f);
-        imageLoadingBar.setWidth("400px");
+        imageLoadingBar.setSizeFull();
 
         cancelImageLoadingButton = new Button("Cancel");
         cancelImageLoadingButton.setWidth("100%");
 
         imageLoadingLayout.addComponent(imageLoadingStatus);
-        imageLoadingLayout.setComponentAlignment(imageLoadingStatus, Alignment.TOP_CENTER);
+        //imageLoadingLayout.setComponentAlignment(imageLoadingStatus, Alignment.TOP_CENTER);
 
         imageLoadingLayout.addComponent(imageLoadingBar);
 
@@ -511,13 +513,15 @@ public class OMEROClientPortlet extends QBiCPortletUI {
             refreshGrid(imageInfoGrid);
 
             imageLoadingBar.setValue(0.0F);
-            imageLoadingBar.setEnabled(true);
-            imageLoadingBar.setWidth("400px");
+            imageLoadingBar.setSizeFull();
+
             imageLoadingStatus.setValue("<b>Loading image data...</b>");
+            imageLoadingStatus.setWidth("400px");
 
             sampleGrid.deselectAll();
 
             imageLoadingWindow.close();
+
 
         });
     }
@@ -754,13 +758,13 @@ public class OMEROClientPortlet extends QBiCPortletUI {
     // A thread to load image data and update progress bar
     class ImageDataLoadingThread extends Thread {
         // Volatile because read in another thread in access()
-        volatile double img_count = 0.0;
+        volatile int img_count = 0;
         volatile boolean interrupted = false;
 
         @Override
         public void run() {
 
-            img_count = 0.0;
+            img_count = 0;
 
             sampleImageMap.forEach( (imageId, ignoredImageName) -> {
 
@@ -786,34 +790,19 @@ public class OMEROClientPortlet extends QBiCPortletUI {
 
                     ImageInfo imageInfo = new ImageInfo(imageId, imageName, thumbnail, imageSize, imageTimePoints, imageChannels);
 
-                    //imageInfos.add(imageInfo);
-                    access(new Runnable() {
-                        @Override
-                        public void run() {
-                            imageInfos.add(imageInfo);
-                        }
-                    });
+                    imageInfos.add(imageInfo);
 
                     // update progress window
-                    img_count += 1.0;
+                    img_count += 1;
 
                 } catch (Exception imgException) {
 
                     interrupted = true;
 
-                    // can this access call be removed?
-                    //access(new Runnable() {
-                    //    @Override
-                    //    public void run() {
-                    //        imageInfos.clear();
-                    //        refreshGrid(imageInfoGrid);
-                    //    }
-                    //});
-
                     LOG.error("--> loading error for ID: " + imageId);
                     LOG.error("--> Error: " + imgException.getMessage() + "<<--");
                     //LOG.debug(imgException);
-                    //return;
+                    return;
                 }
 
                 // Update the UI thread-safely
@@ -821,15 +810,15 @@ public class OMEROClientPortlet extends QBiCPortletUI {
                 access(new Runnable() {
                     @Override
                     public void run() {
-                        imageLoadingBar.setValue((float) (img_count / sampleImageMap.size()));
-                        imageLoadingStatus.setValue("<b>Loading image data... " + (int)((img_count/sampleImageMap.size())*100) + "%</b>" +
-                                                    " (" + (int)img_count + " / " + sampleImageMap.size() + ")");
+                        imageLoadingBar.setValue( ((float)img_count / sampleImageMap.size()) );
+                        imageLoadingStatus.setValue("<b>Loading image data... " + ((img_count/sampleImageMap.size())*100) + "%</b>" +
+                                                    " (" + img_count + " / " + sampleImageMap.size() + ")");
                     }
                 });
 
                 // check for interruption
                 try {
-                    sleep(200); // 1000 for 1 sec.
+                    sleep(10); // 1000 for 1 sec.
                 } catch (InterruptedException e) {
                     interrupted = true;
                     LOG.error("--> loading loop interrupt!");
@@ -839,7 +828,7 @@ public class OMEROClientPortlet extends QBiCPortletUI {
 
             });
 
-            LOG.info("-->>thread loop ended<<--");
+            // LOG.info("-->>thread loop ended<<--");
 
             // wait a bit after loading finishes
             // and check for interruption
@@ -857,7 +846,6 @@ public class OMEROClientPortlet extends QBiCPortletUI {
                 public void run() {
                     // Restore the state to initial
                     imageLoadingBar.setValue(0.0F);
-                    imageLoadingBar.setEnabled(true);
                     imageLoadingStatus.setValue("<b>Loading image data...</b>");
 
                     if(interrupted){
