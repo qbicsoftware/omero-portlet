@@ -772,8 +772,9 @@ public class OMEROClientPortlet extends QBiCPortletUI {
                 access(new Runnable() {
                     @Override
                     public void run() {
+                        double roundOff = Math.round((((float)img_count/sampleImageMap.size())*100) * 100.0) / 100.0;
                         imageLoadingBar.setValue( ((float)img_count / sampleImageMap.size()) );
-                        imageLoadingStatus.setValue("<b>Loading image data... " + ((img_count/sampleImageMap.size())*100) + "%</b>" +
+                        imageLoadingStatus.setValue("<b>Loading image data... " + roundOff + "%</b>" +
                                                     " (" + img_count + " / " + sampleImageMap.size() + ")");
                     }
                 });
