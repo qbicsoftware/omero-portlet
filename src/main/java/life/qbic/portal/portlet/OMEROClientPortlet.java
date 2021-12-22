@@ -471,7 +471,7 @@ public class OMEROClientPortlet extends QBiCPortletUI {
             imageLoadingBar.setValue(0.0F);
             imageLoadingBar.setSizeFull();
 
-            imageLoadingStatus.setValue("<b>Loading image data...</b>");
+            imageLoadingStatus.setValue("");
             imageLoadingStatus.setWidth("400px");
 
             sampleGrid.deselectAll();
@@ -752,7 +752,7 @@ public class OMEROClientPortlet extends QBiCPortletUI {
 
                 } catch (Exception imgException) {
 
-                    interrupted = true;
+                    //interrupted = true;
 
                     LOG.error("--> loading error for ID: " + imageId);
                     LOG.error("--> error: " + imgException.getMessage() + "<<--");
