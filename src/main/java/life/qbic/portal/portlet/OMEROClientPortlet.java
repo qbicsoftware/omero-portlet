@@ -177,7 +177,6 @@ public class OMEROClientPortlet extends QBiCPortletUI {
 
         projectStats = new Label("<b>Project ID: </b>", ContentMode.HTML);
 
-        //projectLayout.addComponent(projectBox);
         projectLayout.addComponent(projectGrid);
         projectLayout.addComponent(refreshButton);
 
