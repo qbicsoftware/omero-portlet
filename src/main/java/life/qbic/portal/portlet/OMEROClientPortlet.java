@@ -456,8 +456,6 @@ public class OMEROClientPortlet extends QBiCPortletUI {
 
             refreshGrid(imageInfoGrid);
             refreshGrid(sampleGrid);
-
-
             Notification.show("Refreshed");
         });
 
