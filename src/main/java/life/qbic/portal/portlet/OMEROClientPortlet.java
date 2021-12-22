@@ -758,7 +758,8 @@ public class OMEROClientPortlet extends QBiCPortletUI {
 
                 } catch (Exception imgException) {
 
-                    //interrupted = true;
+                    // needed to properly shutdown thread
+                    interrupted = true;
 
                     LOG.error("--> loading error for ID: " + imageId);
                     LOG.error("--> error: " + imgException.getMessage() + "<<--");
@@ -808,11 +809,11 @@ public class OMEROClientPortlet extends QBiCPortletUI {
                 public void run() {
                     // Restore the state to initial
                     imageLoadingBar.setValue(0.0F);
-                    imageLoadingStatus.setValue("<b>Loading image data...</b>");
+                    imageLoadingStatus.setValue("");
 
                     if(interrupted){
                         LOG.info("--> thread interruption/error cleanup!");
-                        //imageInfos.clear();
+                        imageInfos.clear();
                     }
                     refreshGrid(imageInfoGrid);
 
