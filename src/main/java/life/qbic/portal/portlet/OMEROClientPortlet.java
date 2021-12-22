@@ -186,9 +186,6 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         //topPanelLayout.addComponent(projectLabel);
         // //topPanelLayout.setComponentAlignment(projectLabel, Alignment.TOP_LEFT);
 
-        //topPanelLayout.addComponent(projectLayout, 0, 0, 0, 0);
-        //topPanelLayout.addComponent(projectLabel, 1, 0, 1, 0);
-        //topPanelLayout.addComponent(projectStats, 2, 0, 2, 0);
 
         topPanelLayout.addComponent(projectLayout, 0, 0, 0, 3);
         topPanelLayout.addComponent(projectStats, 1, 0, 1, 0);
