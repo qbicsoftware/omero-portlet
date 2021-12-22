@@ -348,7 +348,6 @@ public class OMEROClientPortlet extends QBiCPortletUI {
         cancelImageLoadingButton.setWidth("100%");
 
         imageLoadingLayout.addComponent(imageLoadingStatus);
-        //imageLoadingLayout.setComponentAlignment(imageLoadingStatus, Alignment.TOP_CENTER);
 
         imageLoadingLayout.addComponent(imageLoadingBar);
 
