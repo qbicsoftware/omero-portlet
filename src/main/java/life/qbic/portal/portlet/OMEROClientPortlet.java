@@ -463,7 +463,13 @@ public class OMEROClientPortlet extends QBiCPortletUI {
 
             LOG.info("--> Warning: about to interrupt loading thread ...");
 
-            imageLoadingThread.interrupt();
+            try {
+                imageLoadingThread.interrupt();
+                imageLoadingThread.join();
+            } catch (InterruptedException e) {
+                LOG.info("--> thread interrupt during join!");
+                //e.printStackTrace();
+            }
 
             imageInfos.clear();
             refreshGrid(imageInfoGrid);
