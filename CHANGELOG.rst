@@ -4,6 +4,77 @@ Changelog
 
 This project adheres to `Semantic Versioning <https://semver.org/>`_.
 
+1.3.6 (2022-01-04)
+------------------
+**Added**
+
+**Fixed**
+
+* CVE-2021-44832
+
+**Dependencies**
+
+* ``org.apache.logging.log4j:log4j-core:2.17.0`` -> ``2.17.1``
+* ``org.apache.logging.log4j:log4j-api:2.17.0`` -> ``2.17.1``
+
+**Deprecated**
+
+1.3.5 (2021-12-21)
+------------------
+
+**Added**
+
+**Fixed**
+
+* App being blocked by time consuming loading operations, added cancel functionality
+* Fixed UI issue. Project selection was cumbersome, changed to a filterable table
+
+**Dependencies**
+
+* org.apache.logging.log4j 2.16.0 -> 2.17.0 (addresses CVE-2021-45105)
+
+**Deprecated**
+
+1.3.4 (2021-12-17)
+------------------
+
+**Added**
+
+**Fixed**
+
+* Corrected version in pom
+
+**Dependencies**
+
+**Deprecated**
+
+1.3.3 (2021-11-15)
+------------------
+
+**Added**
+
+**Fixed**
+
+**Dependencies**
+
+* org.apache.logging.log4j 2.15.0 -> 2.16.0 (addresses CVE-2021-44228)
+
+**Deprecated**
+
+1.3.2 (2021-11-13)
+------------------
+
+**Added**
+
+**Fixed**
+
+**Dependencies**
+
+* org.apache.logging.log4j 2.13.2 -> 2.15.0 (addresses CVE-2021-44228)
+
+**Deprecated**
+
+
 1.3.1 (2021-11-02)
 ------------------
 
