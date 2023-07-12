@@ -82,7 +82,7 @@ public class OMEROClientPortlet extends QBiCPortletUI {
     protected Layout getPortletContent(final VaadinRequest request) {
 
         try {
-            omeroClient = new BasicOMEROClient(cm.getOmeroUser(), cm.getOmeroPassword(), cm.getOmeroHostname(), Integer.parseInt(cm.getOmeroPort()));
+            omeroClient = new BasicOMEROClient(cm.getOmeroUser(), cm.getOmeroPassword(), cm.getOmeroHostname(), Integer.parseInt(cm.getOmeroPort()), "default");
         } catch (Exception e) {
             LOG.error("Unexpected exception during omero client creation.");
             LOG.debug(e);
@@ -439,7 +439,7 @@ public class OMEROClientPortlet extends QBiCPortletUI {
 
             // re-connect with omero
             try {
-                omeroClient = new BasicOMEROClient(cm.getOmeroUser(), cm.getOmeroPassword(), cm.getOmeroHostname(), Integer.parseInt(cm.getOmeroPort()));
+                omeroClient = new BasicOMEROClient(cm.getOmeroUser(), cm.getOmeroPassword(), cm.getOmeroHostname(), Integer.parseInt(cm.getOmeroPort()), "default");
             } catch (Exception e) {
                 LOG.error("Unexpected exception during omero client creation.");
                 LOG.debug(e);
