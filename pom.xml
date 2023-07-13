@@ -12,7 +12,7 @@
 	</parent>
 
 	<artifactId>omero-portlet</artifactId>
-	<version>1.3.8</version> <!-- <<QUBE_FORCE_BUMP>> -->
+	<version>1.3.7</version> <!-- <<QUBE_FORCE_BUMP>> -->
 	<name>omero-portlet</name>
 	<url>https://github.com/qbicsoftware/omero-portlet</url>
 	<description>Omero-portlet. An image data visualisation portlet for qPortal.</description>
